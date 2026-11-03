@@ -130,15 +130,15 @@ the build instead of relying on review.
 ## Key interfaces
 
 These live in `src/core/` and are the contracts every other module is written
-against. Names are indicative and may change during implementation.
+against. The code in `src/core/` is the source of truth; this is a summary.
 
 ```ts
 type View = 'side' | 'front' | 'back';
 
 interface Landmark {
-  x: number;          // normalised image coordinates, 0..1
+  x: number; // normalised image coordinates, 0..1
   y: number;
-  z: number;          // model's depth estimate; treat as rough
+  z: number; // model's depth estimate; treat as rough
   visibility: number; // 0..1 confidence
 }
 
@@ -149,24 +149,24 @@ interface PoseFrame {
 
 interface PoseEstimator {
   init(): Promise<void>;
-  estimate(frame: VideoFrameSource, timeMs: number): Promise<PoseFrame>;
+  estimate(frame: SampledFrame): Promise<PoseFrame>; // SampledFrame = { timeMs, image }
   dispose(): void;
 }
 
 interface Rep {
   index: number;
   startFrame: number;
-  bottomFrame: number; // or the lift's equivalent turning point
+  turnFrame: number; // the turning point: bottom of a squat, bar on chest
   endFrame: number;
 }
 
 interface CheckResult {
   checkId: string;
   status: 'pass' | 'warn' | 'fail' | 'skipped';
-  message: string;          // plain language, e.g. "Hip crease stayed above the knee"
-  value?: number;           // the measured number, e.g. a depth angle
-  frameIndex?: number;      // where to jump to in the video
-  skippedReason?: string;   // e.g. "Needs a side view"
+  message: string; // plain language, e.g. "Hip crease stayed above the knee"
+  value?: number; // the measured number, e.g. a depth angle
+  frameIndex?: number; // where to jump to in the video
+  skippedReason?: string; // e.g. "Needs a side view"
 }
 
 interface FormCheck {
@@ -177,10 +177,10 @@ interface FormCheck {
 }
 
 interface LiftDefinition {
-  id: string;               // 'squat'
-  name: string;             // 'Back squat'
+  id: string; // 'squat'
+  name: string; // 'Back squat'
   supportedViews: View[];
-  repSignal(frames: PoseFrame[], view: View): number[];
+  repSignal(frames: PoseFrame[], view: View): (number | null)[];
   checks: FormCheck[];
 }
 ```
@@ -207,8 +207,8 @@ supports:
 | View         | Good for                                                        |
 | ------------ | --------------------------------------------------------------- |
 | Side         | Squat depth, torso angle, bar path, hip vs shoulder rise timing |
-| Front / back | Knees caving in, left/right imbalance, stance and grip width     |
-| ~45°         | Not supported. Most measurements are distorted.                  |
+| Front / back | Knees caving in, left/right imbalance, stance and grip width    |
+| ~45°         | Not supported. Most measurements are distorted.                 |
 
 View detection uses simple ratios (for example, apparent shoulder width compared
 to torso length). It shows its guess and lets the user correct it, because a wrong
@@ -219,18 +219,18 @@ view would make every check unreliable.
 These are starting points. Thresholds are tuned against real clips before they
 are trusted.
 
-| Lift     | Check                                   | View         |
-| -------- | --------------------------------------- | ------------ |
-| Squat    | Depth (hip crease vs top of knee)       | Side         |
-| Squat    | Torso angle at the bottom               | Side         |
-| Squat    | Knees caving in                         | Front / back |
-| Deadlift | Hips rising before shoulders off floor  | Side         |
-| Deadlift | Full lockout (hips and knees extended)  | Side         |
-| Deadlift | Hands drifting away from the legs       | Side         |
-| Bench    | Touch point and bar path (from wrists)  | Side         |
-| Bench    | Full lockout                            | Side         |
-| Bench    | Uneven press (one arm lagging)          | Front / back |
-| All      | Rep tempo (time down and up)            | Any          |
+| Lift     | Check                                  | View         |
+| -------- | -------------------------------------- | ------------ |
+| Squat    | Depth (hip crease vs top of knee)      | Side         |
+| Squat    | Torso angle at the bottom              | Side         |
+| Squat    | Knees caving in                        | Front / back |
+| Deadlift | Hips rising before shoulders off floor | Side         |
+| Deadlift | Full lockout (hips and knees extended) | Side         |
+| Deadlift | Hands drifting away from the legs      | Side         |
+| Bench    | Touch point and bar path (from wrists) | Side         |
+| Bench    | Full lockout                           | Side         |
+| Bench    | Uneven press (one arm lagging)         | Front / back |
+| All      | Rep tempo (time down and up)           | Any          |
 
 ## Testing
 
@@ -245,18 +245,18 @@ are trusted.
 
 ## Tooling
 
-| Concern            | Choice                                   | Cost |
-| ------------------ | ---------------------------------------- | ---- |
-| Language           | TypeScript, `strict` mode                | Free |
-| UI                 | React                                    | Free |
-| Package manager    | pnpm                                     | Free |
-| Build / dev server | Vite                                     | Free |
+| Concern            | Choice                                                                | Cost |
+| ------------------ | --------------------------------------------------------------------- | ---- |
+| Language           | TypeScript, `strict` mode                                             | Free |
+| UI                 | React                                                                 | Free |
+| Package manager    | pnpm                                                                  | Free |
+| Build / dev server | Vite                                                                  | Free |
 | Pose model         | MediaPipe Pose Landmarker (`@mediapipe/tasks-vision`), runs on device | Free |
-| Tests              | Vitest                                   | Free |
-| Lint / format      | ESLint and Prettier                      | Free |
-| Import rules       | dependency-cruiser                       | Free |
-| Local history      | IndexedDB, via a small wrapper            | Free |
-| CI and hosting     | GitHub Actions and GitHub Pages           | Free |
+| Tests              | Vitest                                                                | Free |
+| Lint / format      | ESLint and Prettier                                                   | Free |
+| Import rules       | dependency-cruiser                                                    | Free |
+| Local history      | IndexedDB, via a small wrapper                                        | Free |
+| CI and hosting     | GitHub Actions and GitHub Pages                                       | Free |
 
 CI runs type checking, lint, the import rules and tests on every pull request, and
 deploys `main` to GitHub Pages.
