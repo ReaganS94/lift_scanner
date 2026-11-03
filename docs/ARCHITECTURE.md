@@ -287,9 +287,6 @@ deploys `main` to GitHub Pages.
 - **UI framework: React.** The UI is a thin layer over `analysis`, so components
   only render results and call into the pipeline.
 - **Package manager: pnpm.**
-
-## Open questions
-
-- **View detection.** Proposed: the user always picks the lift; the app guesses
-  the camera view (side or front/back) from body proportions, shows the guess,
-  and lets the user correct it. The alternative is always asking for the view.
+- **Camera view: guess and confirm.** The user always picks the lift. The app
+  guesses the view (side or front/back) from body proportions, shows the guess,
+  and the user confirms or corrects it before checks run.
