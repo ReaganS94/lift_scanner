@@ -1,7 +1,7 @@
 import { useEffect, useRef, type RefObject } from 'react';
-import { LANDMARK, type PoseSequence } from '../../core';
-import { DEFAULT_MIN_VISIBILITY } from '../../geometry';
-import { SKELETON_CONNECTIONS } from '../skeleton/connections';
+import { LANDMARK, type PoseSequence } from '../../../core';
+import { DEFAULT_MIN_VISIBILITY } from '../../../geometry';
+import { SKELETON_CONNECTIONS } from '../../skeleton/connections';
 
 interface SkeletonOverlayProps {
   sequence: PoseSequence;
