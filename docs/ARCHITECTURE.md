@@ -255,11 +255,11 @@ floor for a deadlift. So every lift's signal sits near 0 at rest and peaks once
 per rep, whether the lift starts at the top (squat, bench) or the bottom
 (deadlift), and one generic rep detector in `reps/` works for all of them.
 
-| Lift     | Rep signal                               | Rest position |
-| -------- | ---------------------------------------- | ------------- |
-| Squat    | Hip drop below standing                  | Standing      |
-| Deadlift | Hand (bar) rise above the floor position | Bar on floor  |
-| Bench    | Hand (bar) drop below lockout            | Lockout       |
+| Lift     | Rep signal                             | Rest position |
+| -------- | -------------------------------------- | ------------- |
+| Squat    | Hip drop below standing                | Standing      |
+| Deadlift | Shoulder rise above the floor position | Bar on floor  |
+| Bench    | Hand (bar) drop below lockout          | Lockout       |
 
 Because the signal is already in torso lengths from rest, the detector uses fixed
 thresholds rather than fractions of the set's own peak, so a single heavy rep in
@@ -277,6 +277,14 @@ rest) and is at least half the minimum amplitude below the rep's peak, followed
 by a climb of at least as much past the minimum amplitude. The next rep starts at
 the bottom of that dip. Smaller wobbles, and a grinding rep that sinks back
 partway through without getting near rest, don't split a rep.
+
+The last rep of a clip may not get back to rest either: after the final
+deadlift, a lifter often puts the bar down and stands straight up, so their
+shoulders never return to the set position (in the first real clip they came
+back to about 0.45 torso lengths above it). A rep still open when the clip ends
+therefore counts if, after its peak, the signal came at least halfway back to
+rest, and it ends at its lowest point after the peak. A clip cut off at or near
+the top of a rep still doesn't count it.
 
 ## Adding a new lift
 
@@ -371,9 +379,28 @@ starting points, to be tuned on real clips.
 Built. All three need a side view and measure the near side of the body. They
 share `pull.ts`, which finds the pull: from the last frame with the bar on the
 floor up to lockout. A rep starts at its last frame near rest, which for a
-deadlift can be a little way off the floor, so the floor is the hands' lowest
-point in the second before the rep. The lifter faces the way the hands are from
-the hips at the floor.
+deadlift can be a little way off the floor, so the floor is the lowest point of
+whatever follows the bar in the second before the rep. The lifter faces the way
+that point is from the hips at the floor.
+
+What follows the bar is chosen per rep: the hands when they're seen in at least
+80% of the rep's frames, otherwise the shoulders. Filmed from the side, the near
+plate covers the hands (and the knees) for the whole pull; in the first real
+clip the hands were seen in 92 of 1,259 frames and the shoulders in all of them.
+With the hands, the floor frame is the last one near the floor searching back
+from lockout, which skips a dip-and-rip setup. With the shoulders, it is the
+frame before they first rise, searching forward, because hips shooting up keep
+the shoulders low after the bar has left the floor. The bar reaches the knees
+when the hands pass the knee point, if the hands are tracked and the knees are
+seen in 80% of the pull. Otherwise it counts as at the knees once the tracked
+point has covered a third of its rise to lockout, which is where the hands pass
+the knees in a conventional pull (later with the hips set higher, so this is an
+estimate). A pull whose
+tracked point rises less than 0.5 torso lengths started above the knees.
+
+The rep signal always uses the shoulders. Mixing hands and shoulders frame by
+frame would make the signal jump, as they rise by different amounts at
+different times.
 
 | Check             | Measures                                                                    | Pass                                 | Warn       | Fail     |
 | ----------------- | --------------------------------------------------------------------------- | ------------------------------------ | ---------- | -------- |
@@ -388,12 +415,15 @@ the hips at the floor.
   (a dip-and-rip setup), and with only the hands to follow the bar that looks
   the same as the hips rising too early. The cost is that tipping before the bar
   has risen about 2.5 cm isn't counted. It skips pulls that start with the bar
-  above the knees.
+  above the knees. Following the shoulders it is more lenient: hips shooting up
+  barely lift the shoulders, so liftoff is found a little late (a synthetic pull
+  tipping 21° with the hands measures 18° with the shoulders).
 - **Lockout** uses signed tilts (`forwardTilt`) rather than joint angles, so
   leaning back at the top counts as locked out instead of as a hip that hasn't
   straightened. It takes the best moment within 0.25 s of where the bar was
   highest.
-- **Bar path** follows the hands, since the bar is in them. Moving back towards
+- **Bar path** follows the hands, since the bar is in them, and skips reps where
+  they were hidden. Moving back towards
   the body as the knees straighten is normal and isn't counted. With the camera
   off square-on, forward drift is foreshortened, so it can be under-reported but
   never over-reported.

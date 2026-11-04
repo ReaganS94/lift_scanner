@@ -23,7 +23,7 @@ export const lockout: FormCheck = {
   supportedViews: ['side'],
   evaluate(context: RepContext): CheckResult {
     const pull = pullOf(context);
-    if (!pull) return skipped("The hands or hips weren't seen clearly at the floor.");
+    if (!pull) return skipped("The bar or hips weren't followed clearly from the floor.");
 
     const window = TOP_WINDOW_SECONDS * context.sequence.sampleFps;
     let best: { hips: number; knees: number; frameIndex: number } | null = null;

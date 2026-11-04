@@ -97,6 +97,24 @@ describe('segmentReps', () => {
     expect(segmentReps(endsMidRep, FPS, OPTIONS)).toHaveLength(1);
   });
 
+  it('counts a last rep that comes most of the way back down before the clip ends', () => {
+    // A deadlift's last rep: the bar goes down but the lifter stands straight up from a
+    // higher position than their set position, so the signal never gets back to rest.
+    const wave = repWave({ reps: 2, repFrames: 60, restFrames: 20, amplitude: 1 });
+    const lastRep = wave.slice(80, 80 + 70).map((value) => Math.max(value, 0.4));
+    const standUp = Array.from({ length: 30 }, (_, i) => 0.4 + (0.6 * (i + 1)) / 30);
+    const reps = segmentReps([...wave.slice(0, 80), ...lastRep, ...standUp], FPS, OPTIONS);
+    expect(reps).toHaveLength(2);
+    // It ends at its lowest point after lockout, before the lifter stands up.
+    expect(reps[1]?.endFrame).toBeLessThan(80 + 70);
+  });
+
+  it('skips a last rep that only comes a little way down before the clip ends', () => {
+    const wave = repWave({ reps: 2, repFrames: 60, restFrames: 20, amplitude: 1 });
+    const endsNearTop = wave.slice(0, 20 + 80 + 38); // peak at 130, then down to about 0.8
+    expect(segmentReps(endsNearTop, FPS, OPTIONS)).toHaveLength(1);
+  });
+
   it('does not split a rep when the signal jitters near a threshold', () => {
     const wave = repWave({ reps: 1, repFrames: 60, restFrames: 20, amplitude: 1 });
     const jittery = wave.map((value, frame) => value + (frame % 2 === 0 ? 0.04 : -0.04));
