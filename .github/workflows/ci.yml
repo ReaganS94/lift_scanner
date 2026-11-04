@@ -40,7 +40,8 @@ jobs:
       id-token: write
     concurrency:
       group: pages
-      cancel-in-progress: true
+      # Never cancel a deploy part-way; a newer one waits its turn.
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

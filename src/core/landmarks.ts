@@ -11,7 +11,10 @@ export interface Landmark {
   readonly x: number;
   /** Vertical position, from 0 (top edge) to 1 (bottom edge). Grows downwards. */
   readonly y: number;
-  /** The model's depth estimate. Rough: use it as a hint only. */
+  /**
+   * The model's depth estimate, scaled like x. Rough: use it as a hint only. Smaller values are
+   * closer to the camera.
+   */
   readonly z: number;
   /** How confident the model is that this point is visible, 0 to 1. */
   readonly visibility: number;
@@ -58,5 +61,7 @@ export const LANDMARK = {
 } as const;
 
 export type LandmarkName = keyof typeof LANDMARK;
+
+export type BodySide = 'left' | 'right';
 
 export const LANDMARK_COUNT = 33;

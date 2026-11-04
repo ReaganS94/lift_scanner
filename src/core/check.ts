@@ -1,4 +1,5 @@
 import type { PoseSequence } from './pose';
+import type { BodySide } from './landmarks';
 import type { Rep } from './rep';
 import type { View } from './view';
 
@@ -41,6 +42,11 @@ export interface ClipContext {
   readonly view: View;
   /** The lifter's torso length in the frame, for turning distances into body-relative units. */
   readonly torsoLength: number;
+  /**
+   * The side of the body the model saw more clearly. In a side view, measure this side: the far
+   * side is partly hidden and its points are guesses.
+   */
+  readonly nearSide: BodySide;
 }
 
 /** Everything a check gets to look at for a single rep. Read its frames from rep.startFrame to rep.endFrame. */
