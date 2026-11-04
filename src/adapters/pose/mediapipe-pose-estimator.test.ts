@@ -99,6 +99,28 @@ describe('MediaPipePoseEstimator', () => {
     expect(landmarker.close).toHaveBeenCalled();
   });
 
+  it('keeps a newer load when an older one is released and fails late', async () => {
+    let finishFirstLoad: (value: unknown) => void = () => undefined;
+    mediapipe.createFromOptions
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          finishFirstLoad = resolve;
+        }),
+      )
+      .mockResolvedValue(fakeLandmarker());
+    const estimator = newEstimator();
+
+    const first = estimator.init();
+    estimator.dispose();
+    await estimator.init();
+    finishFirstLoad(fakeLandmarker());
+    await expect(first).rejects.toThrow('released');
+
+    // The second load is still the shared one, so another init() doesn't start a third.
+    await estimator.init();
+    expect(mediapipe.createFromOptions).toHaveBeenCalledTimes(2);
+  });
+
   it('keeps timestamps increasing when the next clip starts again at 0', async () => {
     const landmarker = fakeLandmarker();
     mediapipe.createFromOptions.mockResolvedValue(landmarker);

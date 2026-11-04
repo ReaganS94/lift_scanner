@@ -46,11 +46,14 @@ export class MediaPipePoseEstimator implements PoseEstimator<TexImageSource> {
   }
 
   init(): Promise<void> {
-    this.loading ??= this.load().catch((error: unknown) => {
-      this.loading = null; // let the next run try again
+    if (this.loading) return this.loading;
+    const loading = this.load().catch((error: unknown) => {
+      // Let the next run try again, unless dispose() has already let a newer load start.
+      if (this.loading === loading) this.loading = null;
       throw error;
     });
-    return this.loading;
+    this.loading = loading;
+    return loading;
   }
 
   async estimate(frame: SampledFrame<TexImageSource>, aspectRatio: number): Promise<PoseFrame> {
