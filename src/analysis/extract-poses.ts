@@ -5,6 +5,8 @@ export interface ExtractPosesOptions {
   readonly sampleFps: number;
   /** Called after each frame with progress from 0 to 1. */
   readonly onProgress?: (fraction: number) => void;
+  /** Called with each frame's pose as soon as it's found, e.g. to show tracking live. */
+  readonly onFrame?: (pose: PoseFrame, aspectRatio: number) => void;
   /** Checked before each frame; return true to stop early. */
   readonly isCancelled?: () => boolean;
 }
@@ -30,7 +32,9 @@ export async function extractPoses<TImage>(
 
   for await (const frame of source.frames(options.sampleFps)) {
     if (options.isCancelled?.()) throw new ExtractionCancelledError();
-    frames.push(await estimator.estimate(frame, source.aspectRatio));
+    const pose = await estimator.estimate(frame, source.aspectRatio);
+    frames.push(pose);
+    options.onFrame?.(pose, source.aspectRatio);
     if (source.durationMs > 0) {
       options.onProgress?.(Math.min(1, frame.timeMs / source.durationMs));
     }

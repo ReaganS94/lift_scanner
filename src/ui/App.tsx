@@ -14,7 +14,8 @@ interface AppProps<TImage> {
 }
 
 export function App<TImage>({ adapters }: AppProps<TImage>) {
-  const { state, start, cancel, confirmView, changeView, reset } = useAnalysisFlow(adapters);
+  const { state, livePose, start, cancel, confirmView, changeView, reset } =
+    useAnalysisFlow(adapters);
 
   return (
     <main className="app">
@@ -34,7 +35,7 @@ export function App<TImage>({ adapters }: AppProps<TImage>) {
         )}
 
         {state.step === 'extracting' && (
-          <ExtractionProgress progress={state.progress} onCancel={cancel} />
+          <ExtractionProgress progress={state.progress} livePose={livePose} onCancel={cancel} />
         )}
 
         {state.step === 'confirm-view' && (

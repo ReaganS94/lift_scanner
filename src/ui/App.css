@@ -684,3 +684,58 @@ progress::-moz-progress-bar {
 .result-caption .check__badge {
   transform: none;
 }
+
+/* The skeleton being tracked, on a dark grid, while a clip is processed. */
+.live-skeleton {
+  position: relative;
+  margin: 0 auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background:
+    linear-gradient(var(--surface-2) 1px, transparent 1px) 0 0 / 100% 2rem,
+    linear-gradient(90deg, var(--surface-2) 1px, transparent 1px) 0 0 / 2rem 100%,
+    var(--surface);
+}
+
+.live-skeleton canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* A sweeping line, so the box reads as scanning. */
+.live-skeleton::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent);
+  opacity: 0.6;
+  animation: scan 2.4s ease-in-out infinite alternate;
+}
+
+@keyframes scan {
+  from {
+    top: 0;
+  }
+  to {
+    top: calc(100% - 2px);
+  }
+}
+
+.live-skeleton__lost {
+  position: absolute;
+  inset: auto 0 0.75rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--muted);
+  display: none;
+}
+
+.live-skeleton[data-found='false'] .live-skeleton__lost {
+  display: block;
+}
