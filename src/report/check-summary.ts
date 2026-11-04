@@ -14,6 +14,13 @@ export interface CheckSummary {
 
 const SEVERITY: Record<CheckStatus, number> = { skipped: 0, pass: 1, warn: 2, fail: 3 };
 
+/** The most serious of some statuses: fail, then warn, then pass. Skipped when there are none. */
+export function worstStatus(statuses: Iterable<CheckStatus>): CheckStatus {
+  let worst: CheckStatus = 'skipped';
+  for (const status of statuses) if (SEVERITY[status] > SEVERITY[worst]) worst = status;
+  return worst;
+}
+
 /**
  * Groups a set's results by check rather than by rep, in the order of `checkIds`. A check no rep
  * reported on comes back as skipped with zero counts.

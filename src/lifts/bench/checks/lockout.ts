@@ -33,6 +33,7 @@ export const lockout: FormCheck = {
   id: ID,
   label: 'Lockout',
   supportedViews: ['side'],
+  focus: ['shoulder', 'elbow', 'wrist'],
   evaluate(context: RepContext): CheckResult {
     const { rep, sequence } = context;
     const fps = sequence.sampleFps;

@@ -592,6 +592,11 @@ settings are in `vite.config.ts`.
   `prefers-reduced-motion`.
 - **Haptics.** `ui/platform/haptics.ts` buzzes when the results arrive (a double
   buzz if anything failed). Android only: iPhones ignore the Vibration API.
+- **Showing a result on the video.** Each check lists the joints it looks at
+  (`FormCheck.focus`, side-less, display only). Tapping a result pauses on its
+  frame, draws those joints and the lines between them in the result's colour,
+  and lays the result's message over the video. It clears once playback moves
+  off that frame.
 
 ## Known limits
 

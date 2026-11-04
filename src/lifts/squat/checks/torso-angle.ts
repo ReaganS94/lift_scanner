@@ -21,6 +21,7 @@ export const torsoAngle: FormCheck = {
   id: ID,
   label: 'Torso angle',
   supportedViews: ['side'],
+  focus: ['shoulder', 'hip'],
   evaluate(context: RepContext): CheckResult {
     const bottom = squatBottom(context);
     const hip = bottom && sidePoint(bottom.frame, context.nearSide, 'Hip');

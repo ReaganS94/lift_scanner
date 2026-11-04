@@ -29,6 +29,7 @@ export const kneesCaving: FormCheck = {
   id: ID,
   label: 'Knees caving in',
   supportedViews: ['front', 'back'],
+  focus: ['hip', 'knee', 'ankle'],
   evaluate(context: RepContext): CheckResult {
     const frames = repFrames(context);
     const standingFrames = Math.max(1, Math.round(STANDING_SECONDS * context.sequence.sampleFps));

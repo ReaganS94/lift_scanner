@@ -28,6 +28,7 @@ export const unevenPress: FormCheck = {
   id: ID,
   label: 'Uneven press',
   supportedViews: ['front', 'back'],
+  focus: ['elbow', 'wrist'],
   evaluate(context: RepContext): CheckResult {
     const fps = context.sequence.sampleFps;
     const frames = repFrames(context);

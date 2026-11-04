@@ -227,13 +227,51 @@ progress::-moz-progress-bar {
 }
 
 .rep-chart__rep {
-  fill: var(--accent);
-  opacity: 0.08;
   cursor: pointer;
 }
 
-.rep-chart__rep--active {
-  opacity: 0.22;
+.rep-chart__band {
+  fill: var(--accent);
+  opacity: 0.06;
+}
+
+.rep-chart__label {
+  fill: var(--muted);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 9px;
+}
+
+.rep-chart__rep--active .rep-chart__label {
+  fill: var(--accent);
+}
+
+.rep-chart__fill-top {
+  stop-color: var(--accent);
+  stop-opacity: 0.35;
+}
+
+.rep-chart__fill-bottom {
+  stop-color: var(--accent);
+  stop-opacity: 0;
+}
+
+.rep-chart__marker {
+  stroke: var(--bg);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.rep-chart__marker--warn {
+  fill: var(--warn);
+}
+
+.rep-chart__marker--fail {
+  fill: var(--fail);
+}
+
+.rep-chart__rep--active .rep-chart__band {
+  opacity: 0.18;
 }
 
 .rep-chart__playhead {
@@ -497,4 +535,152 @@ progress::-moz-progress-bar {
   border: none;
   background: none;
   text-align: left;
+}
+
+/* The set at a glance, above the video. */
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.hero__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 0.4rem;
+  font-size: 2rem;
+}
+
+.hero__lift {
+  flex-basis: 100%;
+  font-size: 0.85rem;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+}
+
+.hero__count {
+  font-size: 4.5rem;
+  line-height: 0.9;
+}
+
+.hero__tiles {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr));
+  gap: 0.5rem;
+}
+
+.hero__tile {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  border-left: 4px solid var(--muted);
+  animation: badge-pop 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 80ms + 100ms);
+}
+
+.hero__tile:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.hero__score {
+  font-size: 2.25rem;
+  color: var(--muted);
+}
+
+.hero__label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.hero__tile.check--pass {
+  border-left-color: var(--pass);
+}
+.hero__tile.check--pass .hero__score {
+  color: var(--pass);
+}
+.hero__tile.check--warn {
+  border-left-color: var(--warn);
+}
+.hero__tile.check--warn .hero__score {
+  color: var(--warn);
+}
+.hero__tile.check--fail {
+  border-left-color: var(--fail);
+}
+.hero__tile.check--fail .hero__score {
+  color: var(--fail);
+}
+
+.rep-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.rep-chip {
+  --chip: var(--muted);
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0 0.6rem;
+  border-radius: 999px;
+  border: 2px solid var(--chip);
+  color: var(--chip);
+  background: color-mix(in srgb, var(--chip) 12%, var(--surface));
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.2rem;
+  animation: badge-pop 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 50ms + 250ms);
+}
+
+.rep-chip.check--pass {
+  --chip: var(--pass);
+}
+.rep-chip.check--warn {
+  --chip: var(--warn);
+}
+.rep-chip.check--fail {
+  --chip: var(--fail);
+}
+
+.rep-chip--selected {
+  background: var(--chip);
+  color: var(--bg);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--chip) 60%, transparent);
+}
+
+/* The tapped result, over the top of the video while paused on its frame. */
+.result-caption {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  right: 0.5rem;
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius);
+  background: rgb(10 11 13 / 0.8);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--border);
+  font-size: 0.9rem;
+  line-height: 1.35;
+  animation: screen-in 0.2s ease both;
+  pointer-events: none;
+}
+
+.result-caption .check__badge {
+  transform: none;
 }

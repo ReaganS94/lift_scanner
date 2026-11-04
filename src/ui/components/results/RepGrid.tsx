@@ -1,4 +1,4 @@
-import type { FormCheck } from '../../../core';
+import type { FormCheck, MeasuredCheckResult } from '../../../core';
 import type { RepReport } from '../../../report';
 import { badgeStagger, STATUS_TEXT } from './status-badge';
 
@@ -8,7 +8,7 @@ interface RepGridProps {
   checks: readonly Pick<FormCheck, 'id' | 'label'>[];
   selectedRepIndex: number | null;
   /** Shows a rep, paused where a result was measured, or at its start when no frame is given. */
-  onShowResult: (repIndex: number, frameIndex: number | undefined) => void;
+  onShowResult: (repIndex: number, result?: MeasuredCheckResult) => void;
 }
 
 /** Every rep against every check, as a grid of status icons. Tap a cell to see that moment. */
@@ -37,7 +37,7 @@ export function RepGrid({ reps, checks, selectedRepIndex, onShowResult }: RepGri
                   type="button"
                   aria-label={`Show rep ${String(rep.index + 1)}`}
                   onClick={() => {
-                    onShowResult(rep.index, undefined);
+                    onShowResult(rep.index);
                   }}
                 >
                   {rep.index + 1}
@@ -46,14 +46,16 @@ export function RepGrid({ reps, checks, selectedRepIndex, onShowResult }: RepGri
               {checks.map((check, column) => {
                 const result = results.find((candidate) => candidate.checkId === check.id);
                 const status = STATUS_TEXT[result?.status ?? 'skipped'];
-                const frameIndex = result?.status === 'skipped' ? undefined : result?.frameIndex;
                 return (
                   <td key={check.id} className={`check--${result?.status ?? 'skipped'}`}>
                     <button
                       type="button"
                       aria-label={`Rep ${String(rep.index + 1)}, ${check.label}: ${status.label}`}
                       onClick={() => {
-                        onShowResult(rep.index, frameIndex);
+                        onShowResult(
+                          rep.index,
+                          result && result.status !== 'skipped' ? result : undefined,
+                        );
                       }}
                     >
                       <span

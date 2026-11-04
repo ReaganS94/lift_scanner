@@ -65,3 +65,6 @@ export type LandmarkName = keyof typeof LANDMARK;
 export type BodySide = 'left' | 'right';
 
 export const LANDMARK_COUNT = 33;
+
+/** A joint named without its side, e.g. 'knee' for both knees. */
+export type BodyJoint = 'shoulder' | 'elbow' | 'wrist' | 'hip' | 'knee' | 'ankle';
