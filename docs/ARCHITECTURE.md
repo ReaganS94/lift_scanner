@@ -578,6 +578,21 @@ settings are in `vite.config.ts`.
   icon. The PNGs are rendered from it at 180, 192 and 512 px; render them again
   if the SVG changes.
 
+## Look and feel
+
+- **Theme.** `ui/styles/theme.css` holds the colour tokens and base styles: dark
+  only, one electric-lime accent, and pass, warn and fail colours kept apart from
+  the accent. Components use the tokens, never raw colours.
+- **Type.** Headings, buttons and big numbers use Barlow Condensed (OFL), from
+  `@fontsource/barlow-condensed`, imported in `ui/styles/fonts.ts`. It's bundled
+  and precached with the app, so it works offline. Body text uses the system
+  font.
+- **Motion.** `ui/styles/motion.css` slides each screen in and pops result
+  badges in one after another (`badgeStagger`). All of it is switched off under
+  `prefers-reduced-motion`.
+- **Haptics.** `ui/platform/haptics.ts` buzzes when the results arrive (a double
+  buzz if anything failed). Android only: iPhones ignore the Vibration API.
+
 ## Known limits
 
 - **Bench press is the hardest lift to track.** The lifter is lying down and the

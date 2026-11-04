@@ -1,6 +1,6 @@
 import type { FormCheck } from '../../../core';
 import type { RepReport } from '../../../report';
-import { STATUS_TEXT } from './status-badge';
+import { badgeStagger, STATUS_TEXT } from './status-badge';
 
 interface RepGridProps {
   reps: readonly RepReport[];
@@ -43,7 +43,7 @@ export function RepGrid({ reps, checks, selectedRepIndex, onShowResult }: RepGri
                   {rep.index + 1}
                 </button>
               </th>
-              {checks.map((check) => {
+              {checks.map((check, column) => {
                 const result = results.find((candidate) => candidate.checkId === check.id);
                 const status = STATUS_TEXT[result?.status ?? 'skipped'];
                 const frameIndex = result?.status === 'skipped' ? undefined : result?.frameIndex;
@@ -56,7 +56,11 @@ export function RepGrid({ reps, checks, selectedRepIndex, onShowResult }: RepGri
                         onShowResult(rep.index, frameIndex);
                       }}
                     >
-                      <span className="check__badge" aria-hidden="true">
+                      <span
+                        className="check__badge"
+                        aria-hidden="true"
+                        style={badgeStagger(rep.index + column)}
+                      >
                         {status.icon}
                       </span>
                     </button>

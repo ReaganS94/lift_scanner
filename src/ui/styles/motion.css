@@ -1,0 +1,36 @@
+/* Movement: each screen slides in, and result badges pop in one after another. */
+@keyframes screen-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@keyframes badge-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  70% {
+    transform: scale(1.15);
+  }
+}
+
+.screen {
+  animation: screen-in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* --i is the badge's position in its list, set inline, for the stagger. */
+.check__badge {
+  animation: badge-pop 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 60ms + 150ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

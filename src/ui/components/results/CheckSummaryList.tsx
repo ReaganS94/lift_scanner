@@ -1,6 +1,6 @@
 import type { CheckSummary } from '../../../report';
 import { checkSummaryText } from './check-summary-text';
-import { STATUS_TEXT } from './status-badge';
+import { badgeStagger, STATUS_TEXT } from './status-badge';
 
 interface CheckSummaryListProps {
   summaries: readonly CheckSummary[];
@@ -14,12 +14,12 @@ export function CheckSummaryList({ summaries, labels, onShowResult }: CheckSumma
   if (summaries.length === 0) return null;
   return (
     <ul className="check-list check-list--summary">
-      {summaries.map((summary) => {
+      {summaries.map((summary, index) => {
         const status = STATUS_TEXT[summary.worst];
         const { example } = summary;
         const content = (
           <>
-            <span className="check__badge" aria-hidden="true">
+            <span className="check__badge" aria-hidden="true" style={badgeStagger(index)}>
               {status.icon}
             </span>
             <span>

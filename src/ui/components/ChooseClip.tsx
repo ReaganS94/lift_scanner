@@ -59,6 +59,10 @@ export function ChooseClip({ onStart }: ChooseClipProps) {
             Choose video
           </label>
         </div>
+        <p className="muted hint">
+          Videos recorded here may not be saved to your photos. To keep one, film with the camera
+          app and use Choose video.
+        </p>
         {file && (
           <p className="chosen-file">
             <span aria-hidden="true">✓ </span>
