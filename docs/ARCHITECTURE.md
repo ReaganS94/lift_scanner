@@ -153,7 +153,7 @@ relying on review:
 
 The pose model reports positions as fractions of the frame's width and height.
 On a portrait 9:16 clip that squashes the x axis, so a true 45° angle would read
-about 29°. To avoid that, **pose adapters convert landmarks into one shared unit,
+about 29° from horizontal (61° from vertical). To avoid that, **pose adapters convert landmarks into one shared unit,
 the frame's height**: y runs from 0 (top) to 1 (bottom) and x from 0 to the
 frame's aspect ratio. Distances and angles are then true to the image everywhere
 downstream, and no other module needs to know the video's shape.
@@ -343,12 +343,29 @@ CI runs type checking, lint, the import rules and tests on every pull request. O
 
 ## Performance
 
-- The video is processed after recording, so analysis can take a few seconds and
-  doesn't need to keep up in real time. A progress bar covers it.
-- Pose estimation runs in a Web Worker where the browser supports it, so the UI
-  stays responsive.
-- Frames are sampled at a fixed rate (start at 30 per second) rather than every
-  decoded frame, so results don't depend on the phone's recording frame rate.
+- The video is processed after recording, so analysis doesn't need to keep up in
+  real time. A progress bar covers it, and it can be cancelled.
+- Frames are sampled at a fixed rate (30 per second) by seeking to each sample
+  time, rather than playing the video, so no frame is skipped and results don't
+  depend on the phone's recording frame rate. Seeking is the slower approach; if
+  it proves too slow on a phone, `requestVideoFrameCallback` during playback is
+  the alternative.
+- The pose model runs on the GPU when available and falls back to the CPU.
+- Not done yet: running the pose model in a Web Worker to keep the page fully
+  responsive during analysis.
+
+## Adapters
+
+- `adapters/video/VideoFrameSource` loads a video from a URL (the hook owns the
+  object URL for the picked file) and seeks frame by frame.
+- `adapters/pose/MediaPipePoseEstimator` wraps MediaPipe Pose Landmarker in video
+  mode and converts its output with `toSharedUnits` (see Coordinates). MediaPipe
+  needs timestamps that only increase, so it offsets each new clip's times.
+- MediaPipe's WebAssembly runtime is copied from `node_modules` into
+  `public/mediapipe/` by `scripts/copy-mediapipe-wasm.mjs` after every install,
+  so the app serves it itself at exactly the installed version. The model file
+  (about 9 MB, pinned version) is downloaded from Google's model storage on first
+  use and then cached by the browser. No video data is sent anywhere.
 
 ## Known limits
 
