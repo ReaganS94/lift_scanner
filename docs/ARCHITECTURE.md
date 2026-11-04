@@ -590,6 +590,11 @@ settings are in `vite.config.ts`.
 - **Motion.** `ui/styles/motion.css` slides each screen in and pops result
   badges in one after another (`badgeStagger`). All of it is switched off under
   `prefers-reduced-motion`.
+- **Other apps' music keeps playing.** The app has no sound, so at startup
+  `ui/platform/audio-session.ts` sets WebKit's `navigator.audioSession.type` to
+  `ambient` (Safari 17+). That tells iOS not to pause Spotify or Apple Music
+  when the app opens or a muted video plays. Videos are muted before their
+  source is set.
 - **Haptics.** `ui/platform/haptics.ts` buzzes when the results arrive (a double
   buzz if anything failed). Android only: iPhones ignore the Vibration API.
 - **Showing a result on the video.** Each check lists the joints it looks at
