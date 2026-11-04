@@ -1,6 +1,7 @@
 import { useState, type ChangeEvent, type SubmitEvent } from 'react';
 import { liftRegistry } from '../../lifts';
 import { loadLastLift, saveLastLift } from '../preferences/last-lift';
+import { APP_VERSION } from '../version';
 
 interface ChooseClipProps {
   onStart: (liftId: string, file: File) => void;
@@ -89,6 +90,7 @@ export function ChooseClip({ onStart }: ChooseClipProps) {
         Analyse set
       </button>
       <p className="muted">The video is processed on this device and never uploaded.</p>
+      <p className="muted version">Version {APP_VERSION}</p>
     </form>
   );
 }

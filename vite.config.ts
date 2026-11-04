@@ -14,6 +14,12 @@ const POSE_RUNTIME = 'mediapipe/wasm/vision_wasm_internal.{js,wasm}';
 
 export default defineConfig(({ command, isPreview }) => ({
   base: command === 'build' || isPreview ? PAGES_BASE : '/',
+  // The commit being built, shown in the app so a phone can tell which version it's running.
+  define: {
+    'import.meta.env.VITE_APP_VERSION': JSON.stringify(
+      process.env.GITHUB_SHA?.slice(0, 7) ?? 'dev',
+    ),
+  },
   plugins: [
     react(),
     // Makes the app installable on a phone, and able to run offline once the pose model has
