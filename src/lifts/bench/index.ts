@@ -1,4 +1,7 @@
 import type { LiftDefinition } from '../../core';
+import { lockout } from './checks/lockout';
+import { touchPoint } from './checks/touch-point';
+import { unevenPress } from './checks/uneven-press';
 import { benchRepSignal } from './rep-signal';
 
 export const bench: LiftDefinition = {
@@ -11,5 +14,5 @@ export const bench: LiftDefinition = {
     minAmplitude: 0.25,
     minDurationSeconds: 0.6,
   },
-  checks: [],
+  checks: [touchPoint, lockout, unevenPress],
 };

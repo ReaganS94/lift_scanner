@@ -92,6 +92,10 @@ src/
         lockout.ts
         bar-path.ts
     bench/
+      checks/
+        touch-point.ts
+        lockout.ts
+        uneven-press.ts
   analysis/      The pipeline that wires the steps together.
   report/        The report model and its serialisation.
   adapters/      Code that talks to the outside world, behind interfaces
@@ -320,7 +324,7 @@ are trusted.
 | Deadlift | Hips rising before shoulders off floor | Side         |
 | Deadlift | Full lockout (hips and knees extended) | Side         |
 | Deadlift | Hands drifting away from the legs      | Side         |
-| Bench    | Touch point and bar path (from wrists) | Side         |
+| Bench    | Touch point (from wrists)              | Side         |
 | Bench    | Full lockout                           | Side         |
 | Bench    | Uneven press (one arm lagging)         | Front / back |
 | All      | Rep tempo (time down and up)           | Any          |
@@ -398,6 +402,55 @@ the hips at the floor.
   raised a false warning. The worst readings were 0° tipping (a good pull only
   gets more upright after liftoff), 4° of bend and 0.05 torso lengths of drift.
 
+### Bench checks
+
+Built. Touch point and lockout need a side view and measure the near side of the
+body. Uneven press needs the camera along the bench, at the feet or the head:
+choose front or back, either works. The bench rep starts and ends at lockout,
+with the hands lowest at the turn.
+
+| Check        | Measures                                                                                                  | Pass            | Warn            | Fail     |
+| ------------ | --------------------------------------------------------------------------------------------------------- | --------------- | --------------- | -------- |
+| Touch point  | Where the wrist is at the bottom, along the body from the shoulder joint (0) to the hip joint (1)         | 0.15 to 0.6     | Higher or lower | Never    |
+| Lockout      | Bend left at the elbow at the top                                                                         | Up to 15°       | 15° to 25°      | Over 25° |
+| Uneven press | How much lower one hand is than the other on the way up, against the start of the rep, in shoulder widths | Up to 0.1 (10%) | 0.1 to 0.2      | Over 0.2 |
+
+- **Touch point** only warns. Where the bar should touch depends on grip width,
+  arch and arm length, so a touch outside the usual range is worth a look rather
+  than a fault. It's the median over 0.1 s either side of where the hands were
+  lowest, and it reads the same whichever way the lifter lies in the video. The
+  message also says whether the touch was on the upper, middle or lower chest.
+- **Lockout** takes the straightest moment from 0.25 s before the rep ends to
+  0.5 s after it, since the hands are back near the top a little before the arms
+  finish straightening. The bend is smoothed with a rolling median over three
+  frames first, so one lucky frame can't pass a soft lockout. A longer window
+  would be steadier but warned on most touch-and-go reps, where the arms are
+  straight for only a moment. The pass line allows 15° because the model's
+  shoulder, elbow and wrist don't line up perfectly even on a straight arm. Near
+  straight, a little bend makes almost no difference to reach (20° shortens the
+  arm by about 1.5%), so the elbow angle is what's measured, not the hands'
+  height.
+- **Uneven press** judges only the way up. Comparing with the start of each rep,
+  at lockout, cancels a camera that isn't level. Shoulder width is the scale
+  because filming along the bench makes the torso look short. The message names
+  the lagging hand and which side of the video it's on, because left and right
+  swap between filming from the feet and from the head, and the model's left
+  and right labels haven't yet been checked on a lifter lying down.
+- **Bar path is not judged yet.** A good bench bar path isn't straight: it
+  curves from over the shoulders at lockout to the chest and back. What counts
+  as normal is best learnt from real clips.
+- **Jitter**: on 200 seeded synthetic reps with jitter of 0.006 frame heights on
+  every point, cleaned as the pipeline does, none raised a false warning on a
+  good touch or an even press, and none on a held lockout. A touch-and-go
+  lockout passed 198 of 200 times (a 0.25 s window passed 58). The smoothing
+  still flags a soft lockout of 21° 190 times in 200 (taking the single
+  straightest frame flagged 183) and a hand lagging by 15% of shoulder width 192
+  times in 200.
+- **Rep finding from the feet**: there the torso looks short, so the hands'
+  travel is many torso lengths and so is any jitter at lockout. On jittered
+  synthetic sets every rep was still found, but this is one to watch on real
+  clips.
+
 ## Testing
 
 - **Unit tests** (Vitest) for `geometry`, `signal`, `reps` and each check.
@@ -467,7 +520,9 @@ CI runs type checking, lint, the import rules and tests on every pull request. O
 
 - **Bench press is the hardest lift to track.** The lifter is lying down and the
   plates can hide the arms, so pose confidence drops. Bench checks will be rougher
-  than squat and deadlift checks, and skip more often.
+  than squat and deadlift checks, and skip more often. The model was trained
+  mostly on people standing, so its left and right labels for a lifter lying
+  down are least sure.
 - **The bar isn't tracked directly.** Bar path is approximated from the hands. A
   later version could add a small object detector for the plate.
 - **Depth (`z`) from the model is an estimate.** Checks rely on `x` and `y` and

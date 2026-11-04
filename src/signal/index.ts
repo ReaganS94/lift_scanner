@@ -1,5 +1,7 @@
 export { cleanPoses, DEFAULT_CLEAN_POSES_OPTIONS } from './clean-poses';
 export type { CleanPosesOptions } from './clean-poses';
+export { highestRun, lowestRun } from './extremes';
+export type { Extreme } from './extremes';
 export { repFrames } from './rep-frames';
 export type { IndexedFrame } from './rep-frames';
 export { distanceFromRest } from './rest-distance';

@@ -1,6 +1,6 @@
 import type { CheckResult, FormCheck, PoseFrame, RepContext } from '../../../core';
 import { sidePoint } from '../../../geometry';
-import { median, repFrames, rollingMedian, type IndexedFrame } from '../../../signal';
+import { lowestRun, median, repFrames, rollingMedian } from '../../../signal';
 
 /** The start of the rep, standing, that gives the knee gap to compare against. */
 const STANDING_SECONDS = 0.2;
@@ -48,13 +48,17 @@ export const kneesCaving: FormCheck = {
       return g ? g.knees / g.ankles : null;
     });
     const radius = Math.round((SUSTAIN_WINDOW_SECONDS * context.sequence.sampleFps) / 2);
-    const narrowest = narrowestStretch(rollingMedian(shares, radius), frames);
+    // The smoothed share is often level for a few frames at its lowest; the middle one is shown.
+    const narrowest = lowestRun(rollingMedian(shares, radius));
+    const frameIndex = narrowest ? frames[narrowest.position]?.index : undefined;
     // The standing frames were measured, so at least one share was found.
-    if (!narrowest) return skipped("The knees or ankles weren't seen clearly in this rep.");
+    if (!narrowest || frameIndex === undefined) {
+      return skipped("The knees or ankles weren't seen clearly in this rep.");
+    }
 
-    const narrowing = Math.max(0, 1 - narrowest.share / standingKneeShare);
+    const narrowing = Math.max(0, 1 - narrowest.value / standingKneeShare);
     const percent = Math.round(narrowing * 100);
-    const measured = { checkId: ID, value: narrowing, frameIndex: narrowest.frameIndex };
+    const measured = { checkId: ID, value: narrowing, frameIndex };
     if (narrowing <= PASS_UP_TO) {
       return { ...measured, status: 'pass', message: 'Knees held their width.' };
     }
@@ -65,33 +69,6 @@ export const kneesCaving: FormCheck = {
     };
   },
 };
-
-/**
- * The smallest knee share, and the middle frame of the first stretch of frames that share it.
- * A rolling median is often level for a few frames at its lowest, and the middle of that
- * stretch is the moment to show.
- */
-function narrowestStretch(
-  shares: readonly (number | null)[],
-  frames: readonly IndexedFrame[],
-): { share: number; frameIndex: number } | null {
-  let best: { share: number; first: number; last: number } | null = null;
-  let inBestStretch = false;
-  for (const [i, { index }] of frames.entries()) {
-    const share = shares[i];
-    if (share === null || share === undefined) {
-      inBestStretch = false;
-    } else if (best === null || share < best.share) {
-      best = { share, first: index, last: index };
-      inBestStretch = true;
-    } else if (inBestStretch && share === best.share) {
-      best.last = index;
-    } else {
-      inBestStretch = false;
-    }
-  }
-  return best && { share: best.share, frameIndex: Math.round((best.first + best.last) / 2) };
-}
 
 /** The side-to-side gaps between the knees and between the ankles, or null if any is unseen. */
 function gaps(frame: PoseFrame): { knees: number; ankles: number } | null {
