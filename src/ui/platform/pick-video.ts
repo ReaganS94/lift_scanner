@@ -6,7 +6,12 @@
  * a file input with `capture` sitting in the page turns the camera on as soon as the app opens
  * (the green dot), which also pauses music playing in other apps.
  */
+
+/** Closes out the previous request, if its input is still around (e.g. `cancel` never fired). */
+let abandonPrevious: (() => void) | null = null;
+
 export function recordVideo(): Promise<File | null> {
+  abandonPrevious?.();
   return new Promise((resolve) => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -16,8 +21,13 @@ export function recordVideo(): Promise<File | null> {
 
     const finish = (file: File | null) => {
       input.remove();
+      if (abandonPrevious === abandon) abandonPrevious = null;
       resolve(file);
     };
+    const abandon = () => {
+      finish(null);
+    };
+    abandonPrevious = abandon;
     input.addEventListener('change', () => {
       finish(input.files?.[0] ?? null);
     });
