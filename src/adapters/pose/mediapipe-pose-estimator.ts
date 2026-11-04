@@ -24,6 +24,13 @@ export class MediaPipePoseEstimator implements PoseEstimator<TexImageSource> {
   private readonly options: MediaPipePoseEstimatorOptions;
   private fileset: Fileset | null = null;
   private landmarker: PoseLandmarker | null = null;
+  /**
+   * The load in progress or done. Shared so that a run cancelled while the model loads, followed
+   * by a new run, waits for the same load instead of creating a second model.
+   */
+  private loading: Promise<void> | null = null;
+  /** Bumped by dispose(), so a load that finishes afterwards knows it is no longer wanted. */
+  private generation = 0;
   private delegate: Delegate = 'GPU';
   /** Whether the GPU has produced a result yet; until then a failure falls back to the CPU. */
   private gpuProven = false;
@@ -38,15 +45,12 @@ export class MediaPipePoseEstimator implements PoseEstimator<TexImageSource> {
     this.options = options;
   }
 
-  async init(): Promise<void> {
-    if (this.landmarker) return;
-    this.fileset ??= await FilesetResolver.forVisionTasks(this.options.wasmBaseUrl);
-    try {
-      this.landmarker = await this.create('GPU');
-    } catch {
-      // Some phones and browsers can't run the model on the GPU. The CPU is slower but works.
-      this.landmarker = await this.create('CPU');
-    }
+  init(): Promise<void> {
+    this.loading ??= this.load().catch((error: unknown) => {
+      this.loading = null; // let the next run try again
+      throw error;
+    });
+    return this.loading;
   }
 
   async estimate(frame: SampledFrame<TexImageSource>, aspectRatio: number): Promise<PoseFrame> {
@@ -74,6 +78,25 @@ export class MediaPipePoseEstimator implements PoseEstimator<TexImageSource> {
   dispose(): void {
     this.landmarker?.close();
     this.landmarker = null;
+    this.loading = null;
+    this.generation += 1;
+  }
+
+  private async load(): Promise<void> {
+    const generation = this.generation;
+    this.fileset ??= await FilesetResolver.forVisionTasks(this.options.wasmBaseUrl);
+    let landmarker: PoseLandmarker;
+    try {
+      landmarker = await this.create('GPU');
+    } catch {
+      // Some phones and browsers can't run the model on the GPU. The CPU is slower but works.
+      landmarker = await this.create('CPU');
+    }
+    if (generation !== this.generation) {
+      landmarker.close();
+      throw new Error('The pose model was released while it was loading.');
+    }
+    this.landmarker = landmarker;
   }
 
   private async create(delegate: Delegate): Promise<PoseLandmarker> {

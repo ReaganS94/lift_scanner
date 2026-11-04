@@ -3,11 +3,14 @@ import type { FrameSource, SampledFrame } from '../../core';
 /** Loading a picked file is local, so this only trips if the browser can't decode it. */
 const LOAD_TIMEOUT_MS = 15_000;
 const SEEK_TIMEOUT_MS = 5_000;
-/**
- * How long to wait for the new frame after a seek before deciding this browser doesn't report
- * frames for paused seeks, and relying on the seek event alone for the rest of the clip.
- */
+/** How long to wait for the new frame to be shown after a seek. */
 const FRAME_SHOWN_TIMEOUT_MS = 500;
+/**
+ * After this many seeks in a row with no frame reported, assume this browser doesn't report
+ * frames for paused seeks and rely on the seek event alone for the rest of the clip. More than
+ * one, so a single slow frame on a busy phone doesn't turn the check off.
+ */
+const MAX_FRAME_SHOWN_MISSES = 3;
 /**
  * Sample times are nudged just past each frame boundary: seeking to exactly 1/30 s on a 30 fps
  * video can land on either neighbouring frame because of rounding.
@@ -23,8 +26,8 @@ const UNREADABLE = "This video couldn't be read. Try an MP4 or MOV recorded on y
  */
 export class VideoFrameSource implements FrameSource<HTMLVideoElement> {
   private readonly video: HTMLVideoElement;
-  /** Turned off if the browser doesn't report frames for paused seeks. */
-  private waitForFrameShown = true;
+  /** Seeks in a row where the browser didn't report the new frame in time. */
+  private frameShownMisses = 0;
 
   private constructor(video: HTMLVideoElement) {
     this.video = video;
@@ -79,11 +82,14 @@ export class VideoFrameSource implements FrameSource<HTMLVideoElement> {
       SEEK_TIMEOUT_MS,
       'The video stopped responding while being read.',
     );
-    const frameShown = this.waitForFrameShown ? waitForFrameShown(video) : Promise.resolve(true);
+    const frameShown =
+      this.frameShownMisses < MAX_FRAME_SHOWN_MISSES
+        ? waitForFrameShown(video)
+        : Promise.resolve(true);
 
     video.currentTime = seconds;
     const [, shown] = await Promise.all([seeked, frameShown]);
-    if (!shown) this.waitForFrameShown = false;
+    this.frameShownMisses = shown ? 0 : this.frameShownMisses + 1;
   }
 }
 
