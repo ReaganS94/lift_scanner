@@ -2,7 +2,7 @@
  * Repeatable noise for tests, so a test that adds landmark jitter gives the same result on
  * every run.
  */
-import { LANDMARK, type Landmark, type LandmarkName } from '../core';
+import { LANDMARK, type Landmark, type LandmarkName, type PoseSequence } from '../core';
 
 /** A seeded pseudo-random number generator (mulberry32) returning values in [0, 1). */
 export function seededRandom(seed: number): () => number {
@@ -41,4 +41,23 @@ export function jittered(
     };
   }
   return result;
+}
+
+/**
+ * A copy of the sequence with jitter added to the named points in every frame. Run the result
+ * through cleanPoses() to test a check on what the pipeline would really hand it.
+ */
+export function jitteredSequence(
+  sequence: PoseSequence,
+  names: readonly LandmarkName[],
+  standardDeviation: number,
+  random: () => number,
+): PoseSequence {
+  return {
+    ...sequence,
+    frames: sequence.frames.map((frame) => ({
+      ...frame,
+      landmarks: frame.landmarks && jittered(frame.landmarks, names, standardDeviation, random),
+    })),
+  };
 }

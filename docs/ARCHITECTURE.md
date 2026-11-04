@@ -86,6 +86,11 @@ src/
         torso-angle.ts
         knees-caving.ts
     deadlift/
+      pull.ts          Finds the floor, liftoff and knee height, shared by the checks.
+      checks/
+        hips-rise-first.ts
+        lockout.ts
+        bar-path.ts
     bench/
   analysis/      The pipeline that wires the steps together.
   report/        The report model and its serialisation.
@@ -356,6 +361,42 @@ starting points, to be tuned on real clips.
 - **Around parallel**, depth is probably only good to a few degrees. Once real
   clips show the actual spread, a small "about parallel" band may be fairer than
   a hard line at 0°.
+
+### Deadlift checks
+
+Built. All three need a side view and measure the near side of the body. They
+share `pull.ts`, which finds the pull: from the last frame with the bar on the
+floor up to lockout. A rep starts at its last frame near rest, which for a
+deadlift can be a little way off the floor, so the floor is the hands' lowest
+point in the second before the rep. The lifter faces the way the hands are from
+the hips at the floor.
+
+| Check             | Measures                                                                    | Pass                                 | Warn       | Fail     |
+| ----------------- | --------------------------------------------------------------------------- | ------------------------------------ | ---------- | -------- |
+| Hips rising first | How far the torso tips forward from liftoff until the bar reaches the knees | Up to 10°                            | 10° to 20° | Over 20° |
+| Lockout           | Bend left at the hip and knee at the top, whichever is worse                | Up to 10°                            | 10° to 20° | Over 20° |
+| Bar path          | How far the hands move forward from where they left the floor               | Up to 0.1 torso lengths (about 5 cm) | 0.1 to 0.2 | Over 0.2 |
+
+- **Hips rising first** measures from the moment the bar leaves the floor (lean
+  steadied with a rolling median over ±0.1 s), and takes the most tipped moment
+  before the hands reach the knees. Hip movement before liftoff isn't judged:
+  many lifters drop the hips and rise into position as they take the slack out
+  (a dip-and-rip setup), and with only the hands to follow the bar that looks
+  the same as the hips rising too early. The cost is that tipping before the bar
+  has risen about 2.5 cm isn't counted. It skips pulls that start with the bar
+  above the knees.
+- **Lockout** uses signed tilts (`forwardTilt`) rather than joint angles, so
+  leaning back at the top counts as locked out instead of as a hip that hasn't
+  straightened. It takes the best moment within 0.25 s of where the bar was
+  highest.
+- **Bar path** follows the hands, since the bar is in them. Moving back towards
+  the body as the knees straighten is normal and isn't counted. With the camera
+  off square-on, forward drift is foreshortened, so it can be under-reported but
+  never over-reported.
+- **Jitter**: on 200 seeded synthetic good reps with jitter of 0.006 frame
+  heights on every point, cleaned as the pipeline does, none of the three checks
+  raised a false warning. The worst readings were 0° tipping (a good pull only
+  gets more upright after liftoff), 4° of bend and 0.05 torso lengths of drift.
 
 ## Testing
 
