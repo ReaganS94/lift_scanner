@@ -262,9 +262,11 @@ mid-rep doesn't produce a half rep, and standing around before a deadlift isn't
 mistaken for a lockout.
 
 Touch-and-go reps don't return fully to rest between reps, so a rep also ends at
-a bounce: a dip of at least half the lift's minimum amplitude below the rep's
-peak, followed by a climb of at least as much past the minimum amplitude. The
-next rep starts at the bottom of that dip. Smaller wobbles don't split a rep.
+a bounce: a dip that comes back below the lift's minimum amplitude (close to
+rest) and is at least half the minimum amplitude below the rep's peak, followed
+by a climb of at least as much past the minimum amplitude. The next rep starts at
+the bottom of that dip. Smaller wobbles, and a grinding rep that sinks back
+partway through without getting near rest, don't split a rep.
 
 ## Adding a new lift
 

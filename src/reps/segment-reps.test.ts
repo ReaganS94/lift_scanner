@@ -65,6 +65,16 @@ describe('segmentReps', () => {
     expect(segmentReps(wave, FPS, OPTIONS)).toHaveLength(1);
   });
 
+  it('does not split a grinding rep that sinks back partway up', () => {
+    // On the way back up the lifter sinks from 0.9 to 0.65, then grinds the rep out.
+    const base = repWave({ reps: 1, repFrames: 90, restFrames: 20, amplitude: 1 });
+    const sink = [
+      0.85, 0.8, 0.75, 0.7, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65,
+    ];
+    const grind = [...base.slice(0, 70), ...sink, ...base.slice(70)];
+    expect(segmentReps(grind, FPS, OPTIONS)).toHaveLength(1);
+  });
+
   it('ignores movement smaller than the minimum amplitude', () => {
     const signal = repWave({ reps: 3, repFrames: 60, restFrames: 20, amplitude: 0.1 });
     expect(segmentReps(signal, FPS, OPTIONS)).toEqual([]);

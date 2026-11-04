@@ -22,9 +22,10 @@ export const REST_BAND = 0.1;
  * doesn't produce a half rep.
  *
  * Touch-and-go reps don't return fully to rest between reps, so a rep also ends at a bounce: a
- * dip of at least half the minimum amplitude below the rep's peak, followed by a climb of at
- * least as much that passes the minimum amplitude again. The next rep starts at that dip.
- * Smaller wobbles mid-rep don't split it.
+ * dip below the minimum amplitude (close to rest) that is at least half the minimum amplitude
+ * below the rep's peak, followed by a climb of at least as much that passes the minimum
+ * amplitude again. The next rep starts at that dip. Smaller wobbles, and a grinding rep that
+ * sinks back partway through but never gets near rest, don't split a rep.
  *
  * Frame indices refer to the signal, one value per frame of the clip.
  */
@@ -72,7 +73,11 @@ export function segmentReps(
 
     if (value < rep.dip.value) {
       rep.dip = { value, frame };
-    } else if (value >= options.minAmplitude && value - rep.dip.value >= bounce) {
+    } else if (
+      rep.dip.value < options.minAmplitude &&
+      value >= options.minAmplitude &&
+      value - rep.dip.value >= bounce
+    ) {
       addRep(rep.startFrame, rep.dip.frame);
       rep = { startFrame: rep.dip.frame, peak: value, dip: null };
     }
