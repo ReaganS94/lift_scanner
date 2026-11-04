@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CheckStatus, RepContext } from '../../../core';
 import { cleanPoses } from '../../../signal';
-import { jittered, seededRandom } from '../../../testing/noise';
+import { jitteredSequence, seededRandom } from '../../../testing/noise';
 import { moved } from '../../../testing/synthetic-pose';
 import { frontSquatRep } from '../../../testing/squat-pose';
 import { kneesCaving } from './knees-caving';
@@ -70,14 +70,8 @@ describe('squat knees caving in', () => {
       const random = seededRandom(1);
       return Array.from({ length: TRIALS }, () => {
         const clean = frontSquatRep(bottomKneeGap);
-        const frames = clean.sequence.frames.map((frame) => ({
-          ...frame,
-          landmarks: frame.landmarks && jittered(frame.landmarks, LEG_POINTS, JITTER, random),
-        }));
-        const context: RepContext = {
-          ...clean,
-          sequence: cleanPoses({ ...clean.sequence, frames }),
-        };
+        const noisy = jitteredSequence(clean.sequence, LEG_POINTS, JITTER, random);
+        const context: RepContext = { ...clean, sequence: cleanPoses(noisy) };
         return kneesCaving.evaluate(context).status;
       });
     }

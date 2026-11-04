@@ -32,6 +32,24 @@ export function angleFromVertical(from: Vec2, to: Vec2): number | null {
   return jointAngle({ x: from.x + up.x, y: from.y + up.y }, from, to);
 }
 
+/** Which way along the image's x axis the lifter faces: +1 towards the right, -1 the left. */
+export type Facing = 1 | -1;
+
+/**
+ * How far the segment from `from` to `to` tips away from the vertical line through `from`, in
+ * degrees (-90 to 90): positive when `to` is ahead of `from` in the direction the lifter faces,
+ * negative when it is behind. The vertical is whichever of up or down the segment is closer to,
+ * so it works for a torso (hip to shoulder, measured from up) and for a thigh or shin (measured
+ * from down). Unlike jointAngle(), it tells leaning forward from leaning back. Returns null when
+ * the segment has no length.
+ */
+export function forwardTilt(from: Vec2, to: Vec2, facing: Facing): number | null {
+  const ahead = (to.x - from.x) * facing;
+  const vertical = Math.abs(to.y - from.y);
+  if (Math.hypot(ahead, vertical) < MIN_SEGMENT_LENGTH) return null;
+  return Math.atan2(ahead, vertical) * RADIANS_TO_DEGREES;
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
