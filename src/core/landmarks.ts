@@ -1,8 +1,15 @@
-/** One body point from the pose model. */
+/**
+ * One body point from the pose model.
+ *
+ * x and y share one unit, the frame's height, so distances and angles between points are true
+ * to the image whatever the video's shape. y runs from 0 (top) to 1 (bottom) and grows
+ * downwards; x runs from 0 (left) to the frame's width divided by its height. Pose adapters
+ * convert into this space.
+ */
 export interface Landmark {
-  /** Horizontal position, 0 (left edge) to 1 (right edge) of the frame. */
+  /** Horizontal position, from 0 (left edge) to the frame's aspect ratio (right edge). */
   readonly x: number;
-  /** Vertical position, 0 (top edge) to 1 (bottom edge) of the frame. Grows downwards. */
+  /** Vertical position, from 0 (top edge) to 1 (bottom edge). Grows downwards. */
   readonly y: number;
   /** The model's depth estimate. Rough: use it as a hint only. */
   readonly z: number;

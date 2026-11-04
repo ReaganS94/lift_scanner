@@ -1,5 +1,5 @@
-import type { FormCheck } from './check';
-import type { PoseFrame } from './pose';
+import type { ClipContext, FormCheck } from './check';
+import type { RepDetectionOptions } from './rep';
 import type { View } from './view';
 
 /** Everything the pipeline needs to analyse one kind of lift. One per folder in src/lifts/. */
@@ -10,9 +10,15 @@ export interface LiftDefinition {
   readonly name: string;
   readonly supportedViews: readonly View[];
   /**
-   * A single number per frame that rises and falls once per rep, used to find the reps.
-   * For a squat this could be hip height. Return null for frames where it can't be measured.
+   * One number per frame: how far the lifter is from their rest position, in torso lengths.
+   * Null where it can't be measured.
+   *
+   * The rest position is where the lifter waits between reps: standing for a squat, arms locked
+   * out for a bench press, and bar on the floor for a deadlift. So the signal is near 0 at rest
+   * and peaks once per rep at the turning point, whether the lift starts at the top (squat,
+   * bench) or the bottom (deadlift).
    */
-  repSignal(frames: readonly PoseFrame[], view: View): (number | null)[];
+  repSignal(clip: ClipContext): (number | null)[];
+  readonly repDetection: RepDetectionOptions;
   readonly checks: readonly FormCheck[];
 }

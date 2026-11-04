@@ -12,5 +12,7 @@ export interface PoseFrame {
 export interface PoseSequence {
   /** How many frames per second were sampled from the video. */
   readonly sampleFps: number;
+  /** The video's width divided by its height, e.g. 0.5625 for a portrait 9:16 clip. */
+  readonly aspectRatio: number;
   readonly frames: readonly PoseFrame[];
 }

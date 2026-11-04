@@ -1,29 +1,51 @@
-import type { PoseFrame } from './pose';
+import type { PoseSequence } from './pose';
 import type { Rep } from './rep';
 import type { View } from './view';
 
-export type CheckStatus = 'pass' | 'warn' | 'fail' | 'skipped';
-
-/** The outcome of one form check on one rep. */
-export interface CheckResult {
+/** A check that ran and measured something. */
+export interface MeasuredCheckResult {
   readonly checkId: string;
-  readonly status: CheckStatus;
+  readonly status: 'pass' | 'warn' | 'fail';
   /** Plain-language explanation, e.g. "Hip crease stayed above the knee". */
   readonly message: string;
   /** The measured number behind the result, e.g. a depth angle in degrees. */
   readonly value?: number;
-  /** The frame to jump to in the video to see the issue. */
+  /**
+   * The frame to jump to in the video to see the issue. An index into the whole clip's
+   * PoseSequence, the same numbering as Rep.startFrame and Rep.endFrame.
+   */
   readonly frameIndex?: number;
-  /** Why the check couldn't run, e.g. "Needs a side view". Set when status is 'skipped'. */
-  readonly skippedReason?: string;
 }
 
-/** Everything a check gets to look at for a single rep. */
-export interface RepContext {
-  readonly rep: Rep;
+/** A check that couldn't be measured reliably on this rep, so it reports nothing. */
+export interface SkippedCheckResult {
+  readonly checkId: string;
+  readonly status: 'skipped';
+  /** Why the check couldn't run, e.g. "Needs a side view". */
+  readonly message: string;
+}
+
+/** The outcome of one form check on one rep. Narrow on `status` to read measured fields. */
+export type CheckResult = MeasuredCheckResult | SkippedCheckResult;
+
+export type CheckStatus = CheckResult['status'];
+
+/** What the pipeline knows about the whole clip once the view is confirmed. */
+export interface ClipContext {
+  /**
+   * The whole clip, already cleaned. Every frame index anywhere in the app (reps, check
+   * results) refers to this sequence.
+   */
+  readonly sequence: PoseSequence;
+  /** The camera view the user confirmed. */
   readonly view: View;
-  /** The frames of this rep only, from startFrame to endFrame inclusive. */
-  readonly frames: readonly PoseFrame[];
+  /** The lifter's torso length in the frame, for turning distances into body-relative units. */
+  readonly torsoLength: number;
+}
+
+/** Everything a check gets to look at for a single rep. Read its frames from rep.startFrame to rep.endFrame. */
+export interface RepContext extends ClipContext {
+  readonly rep: Rep;
 }
 
 /** One form rule for one lift. Each check lives in its own file under src/lifts/<lift>/checks/. */

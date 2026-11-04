@@ -3,7 +3,14 @@ import type { LiftDefinition } from '../core';
 import { createLiftRegistry } from './registry';
 
 function fakeLift(id: string): LiftDefinition {
-  return { id, name: id, supportedViews: ['side'], repSignal: () => [], checks: [] };
+  return {
+    id,
+    name: id,
+    supportedViews: ['side'],
+    repSignal: () => [],
+    repDetection: { minAmplitude: 0.1, minDurationSeconds: 0.5 },
+    checks: [],
+  };
 }
 
 describe('createLiftRegistry', () => {

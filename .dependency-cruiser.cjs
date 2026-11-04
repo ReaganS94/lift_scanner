@@ -2,7 +2,39 @@
  * Import rules from docs/ARCHITECTURE.md ("Dependency rules").
  * Run with `pnpm deps:check`. CI fails if any rule is broken.
  */
-const PURE = '^src/(core|geometry|signal|view|reps|lifts|analysis|report)/';
+
+/** Pure modules: no browser APIs, no React, testable in Node. */
+const PURE = '^src/(core|geometry|signal|view|reps|lifts|analysis|report|testing)/';
+
+/**
+ * What each layer may import from inside src/. Anything not listed is forbidden, so a new
+ * shortcut between layers fails the build instead of slipping through review.
+ */
+const LAYERS = {
+  core: [],
+  geometry: ['signal'],
+  signal: ['geometry'],
+  view: ['geometry', 'signal'],
+  reps: ['geometry', 'signal'],
+  lifts: ['geometry', 'signal'],
+  report: [],
+  analysis: ['geometry', 'signal', 'view', 'reps', 'lifts', 'report'],
+  adapters: [],
+  testing: [],
+};
+
+const layerRules = Object.entries(LAYERS).map(([layer, allowed]) => {
+  const allowedPaths = [layer, 'core', ...allowed].join('|');
+  return {
+    name: `${layer}-imports-only-allowed-layers`,
+    severity: 'error',
+    comment:
+      `src/${layer}/ may only import from: ${[layer, 'core', ...allowed].join(', ')}. ` +
+      'See docs/ARCHITECTURE.md, "Dependency rules".',
+    from: { path: `^src/${layer}/`, pathNot: '\\.test\\.tsx?$' },
+    to: { path: '^src/', pathNot: `^src/(${allowedPaths})/` },
+  };
+});
 
 /** @type {import('dependency-cruiser').IConfiguration} */
 module.exports = {
@@ -14,19 +46,14 @@ module.exports = {
       from: {},
       to: { circular: true },
     },
+    ...layerRules,
     {
-      name: 'core-has-no-dependencies',
+      name: 'tests-import-only-their-layer-and-test-helpers',
       severity: 'error',
-      comment: 'core/ holds shared types and interfaces only. It imports nothing else from src.',
-      from: { path: '^src/core/' },
-      to: { path: '^src/', pathNot: '^src/core/' },
-    },
-    {
-      name: 'pure-modules-stay-pure',
-      severity: 'error',
-      comment:
-        'Pure modules must not reach into adapters or the UI, so they stay testable in Node.',
-      from: { path: PURE },
+      comment: 'A test may import its own layer, the layers it may use, and src/testing.',
+      from: {
+        path: '^src/(core|geometry|signal|view|reps|lifts|report|analysis)/.+\\.test\\.tsx?$',
+      },
       to: { path: '^src/(adapters|ui)/' },
     },
     {
@@ -37,25 +64,18 @@ module.exports = {
       to: { path: 'node_modules/(react|react-dom)/' },
     },
     {
-      name: 'math-modules-only-use-core',
-      severity: 'error',
-      comment: 'geometry/ and signal/ are low-level maths and may only use core/ and each other.',
-      from: { path: '^src/(geometry|signal)/' },
-      to: { path: '^src/', pathNot: '^src/(core|geometry|signal)/' },
-    },
-    {
       name: 'lifts-do-not-import-each-other',
       severity: 'error',
-      comment: 'Each lift is self-contained. Shared helpers belong in geometry, signal or reps.',
+      comment: 'Each lift is self-contained. Shared helpers belong in geometry or signal.',
       from: { path: '^src/lifts/([^/]+)/' },
       to: { path: '^src/lifts/[^/]+/', pathNot: '^src/lifts/$1/' },
     },
     {
-      name: 'adapters-only-use-core',
+      name: 'only-tests-use-test-helpers',
       severity: 'error',
-      comment: 'Adapters implement interfaces from core/ and hold no analysis logic.',
-      from: { path: '^src/adapters/' },
-      to: { path: '^src/', pathNot: '^src/(core|adapters)/' },
+      comment: 'src/testing/ builds fake data for tests. App code must not depend on it.',
+      from: { path: '^src/', pathNot: ['\\.test\\.tsx?$', '^src/testing/'] },
+      to: { path: '^src/testing/' },
     },
     {
       name: 'no-test-code-in-app',
