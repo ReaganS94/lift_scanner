@@ -2,14 +2,20 @@
 export interface Rep {
   /** 0-based position of the rep in the set. */
   readonly index: number;
-  /** The last frame at the rest position before the rep (within 0.1 torso lengths of it). */
+  /**
+   * The last frame at the rest position before the rep (within 0.1 torso lengths of it), or
+   * for a touch-and-go rep, the bottom of the bounce where the previous rep ended.
+   */
   readonly startFrame: number;
   /**
    * Where the movement reverses, furthest from rest: the bottom of a squat, the bar on the chest
    * in a bench press, lockout at the top of a deadlift.
    */
   readonly turnFrame: number;
-  /** The first frame back at the rest position (within 0.1 torso lengths of it). */
+  /**
+   * The first frame back at the rest position (within 0.1 torso lengths of it), or the bottom
+   * of the bounce before a touch-and-go rep.
+   */
   readonly endFrame: number;
 }
 
