@@ -3,13 +3,17 @@ import { rollingMedian } from '../../../signal';
 import { pullOf, torsoLean, type Pull } from '../pull';
 
 /**
- * How much further forward the torso may tip between the bar leaving the floor and the hands
+ * How much further forward the torso may tip between the bar leaving the floor and the bar
  * reaching the knees, in degrees. In a good pull the hips and shoulders rise together, so the
  * torso angle holds or gets more upright; hips shooting up first tip the chest towards the floor.
  *
  * Hip movement before the bar leaves the floor isn't judged. Many lifters drop the hips and
  * rise into position as they take the slack out, and with only the hands to follow the bar
  * that looks the same as hips rising too early.
+ *
+ * When the plates hide the hands, the shoulders follow the bar instead (see pullOf). Hips
+ * shooting up keep the shoulders low, so liftoff is then found a little late and some early
+ * tipping can be missed: the check is more lenient, never harsher.
  */
 const PASS_UP_TO_DEGREES = 10;
 /** Tipping further than this is a fail; between the two is a warning. */
@@ -26,9 +30,9 @@ export const hipsRiseFirst: FormCheck = {
   supportedViews: ['side'],
   evaluate(context: RepContext): CheckResult {
     const pull = pullOf(context);
-    if (!pull) return skipped("The hands or hips weren't seen clearly at the floor.");
+    if (!pull) return skipped("The bar or hips weren't followed clearly from the floor.");
     if (pull.kneeHeight === null) {
-      return skipped("The hands weren't seen reaching the knees in this rep.");
+      return skipped("The bar wasn't seen reaching the knees in this rep.");
     }
 
     if (pull.kneeHeight <= pull.liftoff) {
@@ -57,7 +61,7 @@ export const hipsRiseFirst: FormCheck = {
 };
 
 /**
- * How far the torso tips forward from where it was as the bar left the floor, up to the hands
+ * How far the torso tips forward from where it was as the bar left the floor, up to the bar
  * reaching the knees, in degrees, and the frame where it is most tipped. Null if the torso
  * wasn't seen at liftoff.
  */

@@ -3,9 +3,16 @@
  * the contract the generic rep detector relies on (see LiftDefinition.repSignal).
  */
 import { describe, expect, it } from 'vitest';
-import type { ClipContext, LandmarkName, LiftDefinition } from '../core';
+import type { ClipContext, Landmark, LandmarkName, LiftDefinition } from '../core';
 import { segmentReps } from '../reps';
-import { moved, repWave, sequenceOf, standingFigure, UPPER_BODY } from '../testing/synthetic-pose';
+import {
+  moved,
+  repWave,
+  sequenceOf,
+  setVisibility,
+  standingFigure,
+  UPPER_BODY,
+} from '../testing/synthetic-pose';
 import { bench } from './bench';
 import { deadlift } from './deadlift';
 import { squat } from './squat';
@@ -35,28 +42,31 @@ describe('rep signals', () => {
     expectThreeReps(squat, setOf(UPPER_BODY, 1, 0.9), 0.9);
   });
 
-  it('deadlift: bar rising from the floor', () => {
-    // Start with the hands low (bar on the floor) and raise them each rep.
-    const wave = repWave({ reps: 3, repFrames: 60, restFrames: 20, amplitude: 0.8 });
-    const atFloor = moved(standingFigure('side'), HANDS, 0, 0.2);
-    const sequence = sequenceOf(wave.map((amount) => moved(atFloor, HANDS, 0, -amount * TORSO)));
+  it('deadlift: shoulders rising from the floor', () => {
+    // Start bent over the bar (shoulders low) and stand up each rep. The hands are hidden
+    // throughout, as they are behind the plates when filmed from the side.
+    const wave = repWave({ reps: 3, repFrames: 60, restFrames: 20, amplitude: 0.9 });
+    const atFloor = moved(standingFigure('side'), UPPER_BODY, 0, 0.9 * TORSO);
+    const sequence = sequenceOf(
+      wave.map((amount) => withHandsHidden(moved(atFloor, UPPER_BODY, 0, -amount * TORSO))),
+    );
     expectThreeReps(
       deadlift,
       { sequence, view: 'side', torsoLength: TORSO, nearSide: 'left' },
-      0.8,
+      0.9,
     );
   });
 
   it('deadlift: a heavy single with standing around before and after', () => {
-    // Stands holding nothing for 10 s, bends to the bar, one 2 s pull, back to the floor,
-    // stands up again. Standing has the hands as high as lockout, but no rest comes before
-    // the first standing period or after the last, so only the pull counts.
+    // Stands for 10 s, bends to the bar, one 2 s pull, back to the floor, stands up again.
+    // Standing has the shoulders as high as lockout, but no rest comes before the first
+    // standing period or after the last, so only the pull counts.
     const standing = standingFigure('side');
-    const atFloor = moved(standing, HANDS, 0, 0.2);
-    const pull = repWave({ reps: 1, repFrames: 60, restFrames: 45, amplitude: 0.8 });
+    const atFloor = moved(standing, UPPER_BODY, 0, 0.9 * TORSO);
+    const pull = repWave({ reps: 1, repFrames: 60, restFrames: 45, amplitude: 0.9 });
     const frames = [
       ...Array.from({ length: 300 }, () => standing),
-      ...pull.map((amount) => moved(atFloor, HANDS, 0, -amount * TORSO)),
+      ...pull.map((amount) => moved(atFloor, UPPER_BODY, 0, -amount * TORSO)),
       ...Array.from({ length: 300 }, () => standing),
     ];
     const clip: ClipContext = {
@@ -77,3 +87,8 @@ describe('rep signals', () => {
     expect(segmentReps(signal, 30, squat.repDetection)).toEqual([]);
   });
 });
+
+function withHandsHidden(landmarks: Landmark[]): Landmark[] {
+  for (const name of HANDS) setVisibility(landmarks, name, 0);
+  return landmarks;
+}

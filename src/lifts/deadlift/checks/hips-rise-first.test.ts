@@ -89,6 +89,49 @@ describe('deadlift hips rising first', () => {
     expect(hipsRiseFirst.evaluate(context)).toMatchObject({ status: 'skipped' });
   });
 
+  describe('with the hands hidden behind the plates, following the shoulders', () => {
+    const hidden = (path?: (t: number) => DeadliftPosition) =>
+      sideDeadliftRep(path, (landmarks) => {
+        setVisibility(landmarks, 'leftWrist', 0);
+        setVisibility(landmarks, 'rightWrist', 0);
+        return landmarks;
+      });
+
+    it('passes a good pull', () => {
+      expect(hipsRiseFirst.evaluate(hidden())).toMatchObject({ status: 'pass' });
+    });
+
+    it('flags hips shooting up, if a little more leniently than with the hands', () => {
+      // 16° with the hands too: the tipping happens after the shoulders start to rise.
+      expect(hipsRiseFirst.evaluate(hidden(hipsFirst(75)))).toMatchObject({
+        status: 'warn',
+        value: expect.closeTo(16, 0) as number,
+      });
+      // 21° with the hands. The shoulders barely rise while the hips shoot up, so liftoff is
+      // found a frame late and some of the early tipping is missed.
+      expect(hipsRiseFirst.evaluate(hidden(hipsFirst(82)))).toMatchObject({ status: 'warn' });
+    });
+
+    it('rarely flags a good pull when the points jitter', () => {
+      const everyPoint = Object.keys(LANDMARK) as LandmarkName[];
+      const random = seededRandom(2);
+      const passes = Array.from({ length: 200 }, () => {
+        const clean = hidden();
+        const noisy = jitteredSequence(clean.sequence, everyPoint, 0.006, random);
+        const context: RepContext = { ...clean, sequence: cleanPoses(noisy) };
+        return hipsRiseFirst.evaluate(context).status;
+      }).filter((status) => status === 'pass').length;
+      expect(passes).toBeGreaterThanOrEqual(194);
+    });
+
+    it('skips a pull that starts with the bar above the knees', () => {
+      const rackPull = hidden((t) =>
+        between({ shin: 3, thigh: 10, torso: 35 }, DEADLIFT_LOCKOUT, t),
+      );
+      expect(hipsRiseFirst.evaluate(rackPull)).toMatchObject({ status: 'skipped' });
+    });
+  });
+
   it('rarely flags a good pull when the points jitter', () => {
     const everyPoint = Object.keys(LANDMARK) as LandmarkName[];
     const random = seededRandom(1);

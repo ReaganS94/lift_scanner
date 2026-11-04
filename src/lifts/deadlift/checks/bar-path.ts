@@ -21,12 +21,13 @@ export const barPath: FormCheck = {
   evaluate(context: RepContext): CheckResult {
     const pull = pullOf(context);
     const liftoff = pull?.frames[pull.liftoff];
-    const start = liftoff && averagePoint(liftoff.frame, WRISTS);
-    if (!pull || !start) {
+    const start = pull?.tracker === 'hands' && liftoff && averagePoint(liftoff.frame, WRISTS);
+    if (!pull || !liftoff || !start) {
       return {
         checkId: ID,
         status: 'skipped',
-        message: "The hands weren't seen clearly at the floor.",
+        message:
+          "The hands weren't seen clearly, often because the plates hide them from the side.",
       };
     }
 
