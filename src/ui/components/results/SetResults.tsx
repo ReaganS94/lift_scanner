@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { PreparedClip } from '../../../analysis';
-import type { PoseSequence } from '../../../core';
+import type { MeasuredCheckResult, PoseSequence } from '../../../core';
 import { liftRegistry } from '../../../lifts';
 import { summarize, summarizeByCheck, type ReportSummary, type SetReport } from '../../../report';
 import { downloadJson } from '../../download';
@@ -12,9 +12,11 @@ import { CheckSummaryList } from './CheckSummaryList';
 import { PlaybackControls } from './PlaybackControls';
 import { RepDetail } from './RepDetail';
 import { RepGrid } from './RepGrid';
-import { RepSignalChart } from './RepSignalChart';
+import { SetHero } from './SetHero';
+import { RepSignalChart, type ChartMarker } from './RepSignalChart';
+import { ResultCaption } from './ResultCaption';
 import { ResultsActions } from './ResultsActions';
-import { SkeletonOverlay } from './SkeletonOverlay';
+import { SkeletonOverlay, type SkeletonHighlight } from './SkeletonOverlay';
 
 interface SetResultsProps {
   videoUrl: string;
@@ -46,6 +48,8 @@ export function SetResults({
     report.reps.length > 0 ? 0 : null,
   );
   const [looping, setLooping] = useState(false);
+  // The result last tapped. It's shown on the video while paused on the frame it was measured at.
+  const [focused, setFocused] = useState<MeasuredCheckResult | null>(null);
 
   const { sequence } = prepared;
   const reps = report.reps.map((repReport) => repReport.rep);
@@ -75,19 +79,47 @@ export function SetResults({
   }, [hasFails]);
 
   const playingRep = playback.playing ? repAtFrame(reps, playback.frame) : undefined;
+  const shownIds = new Set(shownChecks.map((check) => check.id));
+  const markers: ChartMarker[] = report.reps.flatMap(({ results }) =>
+    results.flatMap((result) =>
+      shownIds.has(result.checkId) &&
+      (result.status === 'warn' || result.status === 'fail') &&
+      result.frameIndex !== undefined
+        ? [{ frame: result.frameIndex, status: result.status }]
+        : [],
+    ),
+  );
 
-  const showResult = (repIndex: number, frameIndex: number | undefined) => {
+  const onFocusedFrame =
+    focused !== null && !playback.playing && playback.frame === focused.frameIndex;
+  const highlight: SkeletonHighlight | null = onFocusedFrame
+    ? {
+        joints: new Set(checks.find((check) => check.id === focused.checkId)?.focus ?? []),
+        status: focused.status,
+      }
+    : null;
+
+  /** Selects a rep and pauses on a result's frame, or on the rep's start without one. */
+  const showResult = (repIndex: number, result?: MeasuredCheckResult) => {
     const repReport = report.reps.find(({ rep }) => rep.index === repIndex);
     if (!repReport) return;
     setSelectedRepIndex(repIndex);
-    playback.showFrame(frameIndex ?? repReport.rep.startFrame);
+    const frame = result?.frameIndex;
+    setFocused(result && frame !== undefined ? result : null);
+    playback.showFrame(frame ?? repReport.rep.startFrame);
   };
 
   return (
     <div className="stack">
-      <h2>
-        {lift?.name ?? report.liftId}: {summary.reps} {summary.reps === 1 ? 'rep' : 'reps'} found
-      </h2>
+      <SetHero
+        liftName={lift?.name ?? report.liftId}
+        reps={report.reps}
+        summaries={checkSummaries}
+        labels={labels}
+        shownCheckIds={shownIds}
+        selectedRepIndex={selectedRepIndex}
+        onShowResult={showResult}
+      />
       {summaryText(summary) && <p className="verdict">{summaryText(summary)}</p>}
       <p className="muted">
         {viewLabel(report.view)} view.{' '}
@@ -112,7 +144,13 @@ export function SetResults({
             preload="auto"
             onClick={playback.togglePlay}
           />
-          <SkeletonOverlay sequence={sequence} videoRef={videoRef} />
+          <SkeletonOverlay sequence={sequence} videoRef={videoRef} highlight={highlight} />
+          {onFocusedFrame && (
+            <ResultCaption
+              result={focused}
+              label={labels.get(focused.checkId) ?? focused.checkId}
+            />
+          )}
         </div>
         <PlaybackControls
           playback={playback}
@@ -129,6 +167,7 @@ export function SetResults({
       <RepSignalChart
         signal={report.repSignal}
         reps={reps}
+        markers={markers}
         currentFrame={playback.frame}
         activeRepIndex={playingRep?.index ?? selectedRepIndex}
         onSelectRep={(rep) => {
@@ -174,7 +213,9 @@ export function SetResults({
                 onPlay={() => {
                   playback.playFrom(selected.rep);
                 }}
-                onShowFrame={playback.showFrame}
+                onShowResult={(result) => {
+                  showResult(selected.rep.index, result);
+                }}
               />
             )}
           </section>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CheckResult } from '../core';
-import { summarizeByCheck } from './check-summary';
+import { summarizeByCheck, worstStatus } from './check-summary';
 import type { SetReport } from './set-report';
 
 function reportWith(...repResults: (readonly CheckResult[])[]): SetReport {
@@ -65,5 +65,16 @@ describe('summarizeByCheck', () => {
     ]);
 
     expect(summarizeByCheck(report, ['b', 'a']).map((s) => s.checkId)).toEqual(['b', 'a']);
+  });
+});
+
+describe('worstStatus', () => {
+  it('ranks fail over warn over pass over skipped', () => {
+    expect(worstStatus(['pass', 'fail', 'warn'])).toBe('fail');
+    expect(worstStatus(['skipped', 'pass'])).toBe('pass');
+  });
+
+  it('is skipped when there is nothing', () => {
+    expect(worstStatus([])).toBe('skipped');
   });
 });

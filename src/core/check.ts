@@ -1,5 +1,5 @@
 import type { PoseSequence } from './pose';
-import type { BodySide } from './landmarks';
+import type { BodyJoint, BodySide } from './landmarks';
 import type { Rep } from './rep';
 import type { View } from './view';
 
@@ -61,5 +61,10 @@ export interface FormCheck {
   readonly label: string;
   /** Views this check gives trustworthy results for. It is skipped on any other view. */
   readonly supportedViews: readonly View[];
+  /**
+   * The joints this check looks at, on both sides, so the app can highlight them on the video.
+   * For display only: it doesn't change what the check measures.
+   */
+  readonly focus?: readonly BodyJoint[];
   evaluate(context: RepContext): CheckResult;
 }

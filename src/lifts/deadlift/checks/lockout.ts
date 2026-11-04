@@ -21,6 +21,7 @@ export const lockout: FormCheck = {
   id: ID,
   label: 'Lockout',
   supportedViews: ['side'],
+  focus: ['shoulder', 'hip', 'knee', 'ankle'],
   evaluate(context: RepContext): CheckResult {
     const pull = pullOf(context);
     if (!pull) return skipped("The bar or hips weren't followed clearly from the floor.");

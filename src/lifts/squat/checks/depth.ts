@@ -17,6 +17,7 @@ export const depth: FormCheck = {
   id: ID,
   label: 'Depth',
   supportedViews: ['side'],
+  focus: ['hip', 'knee'],
   evaluate(context: RepContext): CheckResult {
     const bottom = squatBottom(context);
     if (!bottom) {

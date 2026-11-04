@@ -1,16 +1,16 @@
-import type { CheckResult } from '../../../core';
+import type { CheckResult, MeasuredCheckResult } from '../../../core';
 import { badgeStagger, STATUS_TEXT } from './status-badge';
 
 interface RepChecksProps {
   results: readonly CheckResult[];
   /** The label shown for each check id. */
   labels: ReadonlyMap<string, string>;
-  /** Jumps the video to a frame of the clip, to show where a result was measured. */
-  onShowFrame: (frameIndex: number) => void;
+  /** Jumps the video to where a result was measured. */
+  onShowResult: (result: MeasuredCheckResult) => void;
 }
 
 /** The form check results for one rep. Each measured result links to its moment in the video. */
-export function RepChecks({ results, labels, onShowFrame }: RepChecksProps) {
+export function RepChecks({ results, labels, onShowResult }: RepChecksProps) {
   if (results.length === 0) return null;
   return (
     <ul className="check-list">
@@ -27,17 +27,18 @@ export function RepChecks({ results, labels, onShowFrame }: RepChecksProps) {
             </span>
           </>
         );
-        const frameIndex = result.status === 'skipped' ? undefined : result.frameIndex;
+        const measured =
+          result.status !== 'skipped' && result.frameIndex !== undefined ? result : null;
         return (
           <li key={result.checkId} className={`check check--${result.status}`}>
-            {frameIndex === undefined ? (
+            {measured === null ? (
               <div className="check__body">{content}</div>
             ) : (
               <button
                 type="button"
                 className="check__body"
                 onClick={() => {
-                  onShowFrame(frameIndex);
+                  onShowResult(measured);
                 }}
               >
                 {content}

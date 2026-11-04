@@ -18,6 +18,7 @@ export const barPath: FormCheck = {
   id: ID,
   label: 'Bar path',
   supportedViews: ['side'],
+  focus: ['elbow', 'wrist'],
   evaluate(context: RepContext): CheckResult {
     const pull = pullOf(context);
     const liftoff = pull?.frames[pull.liftoff];

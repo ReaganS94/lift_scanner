@@ -28,6 +28,7 @@ export const hipsRiseFirst: FormCheck = {
   id: ID,
   label: 'Hips rising first',
   supportedViews: ['side'],
+  focus: ['shoulder', 'hip'],
   evaluate(context: RepContext): CheckResult {
     const pull = pullOf(context);
     if (!pull) return skipped("The bar or hips weren't followed clearly from the floor.");

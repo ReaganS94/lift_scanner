@@ -1,3 +1,4 @@
+import type { MeasuredCheckResult } from '../../../core';
 import type { CheckSummary } from '../../../report';
 import { checkSummaryText } from './check-summary-text';
 import { badgeStagger, STATUS_TEXT } from './status-badge';
@@ -6,7 +7,7 @@ interface CheckSummaryListProps {
   summaries: readonly CheckSummary[];
   labels: ReadonlyMap<string, string>;
   /** Shows the worst rep for a check, paused where it was measured. */
-  onShowResult: (repIndex: number, frameIndex: number | undefined) => void;
+  onShowResult: (repIndex: number, result: MeasuredCheckResult) => void;
 }
 
 /** One line per form check for the whole set, worst rep first. */
@@ -41,7 +42,7 @@ export function CheckSummaryList({ summaries, labels, onShowResult }: CheckSumma
                 type="button"
                 className="check__body"
                 onClick={() => {
-                  onShowResult(example.repIndex, example.result.frameIndex);
+                  onShowResult(example.repIndex, example.result);
                 }}
               >
                 {content}

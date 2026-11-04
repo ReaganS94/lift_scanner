@@ -1,3 +1,4 @@
+import type { MeasuredCheckResult } from '../../../core';
 import type { RepReport } from '../../../report';
 import { formatSeconds, timeOfFrame } from '../../playback/frames';
 import { RepChecks } from './RepChecks';
@@ -9,7 +10,7 @@ interface RepDetailProps {
   hiddenCheckIds: ReadonlySet<string>;
   labels: ReadonlyMap<string, string>;
   onPlay: () => void;
-  onShowFrame: (frameIndex: number) => void;
+  onShowResult: (result: MeasuredCheckResult) => void;
 }
 
 /** The selected rep's full results, each linking to the moment it was measured. */
@@ -19,7 +20,7 @@ export function RepDetail({
   hiddenCheckIds,
   labels,
   onPlay,
-  onShowFrame,
+  onShowResult,
 }: RepDetailProps) {
   return (
     <section className="rep-card" aria-label={`Rep ${String(rep.index + 1)} details`}>
@@ -38,7 +39,7 @@ export function RepDetail({
       <RepChecks
         results={results.filter((result) => !hiddenCheckIds.has(result.checkId))}
         labels={labels}
-        onShowFrame={onShowFrame}
+        onShowResult={onShowResult}
       />
     </section>
   );
