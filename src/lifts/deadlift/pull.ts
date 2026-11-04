@@ -18,14 +18,17 @@ const LIFTOFF_TORSOS = 0.05;
 const FLOOR_LOOKBACK_SECONDS = 1;
 /**
  * The hands follow the bar when they're seen in at least this share of the rep's frames.
- * Otherwise, as when the plates hide them in a side view, the shoulders stand in for them.
+ * Otherwise, as when the plates hide them in a side view, the shoulders stand in for them. The
+ * knees are compared against the hands when they're seen in this share of the pull's frames.
  */
 const HANDS_SEEN_SHARE = 0.8;
 /**
- * The bar is taken to reach the knees once the tracked points have covered this share of their
- * rise from the floor to lockout. For a conventional pull the hands pass the knees about a
- * third of the way up, and so do the shoulders when the hips and shoulders rise together.
- * Measuring it this way works when the knees are hidden behind the plates.
+ * When the hands and knees are both seen, the bar reaches the knees when the hands do.
+ * Otherwise it is taken to reach them once the tracked points have covered this share of their
+ * rise from the floor to lockout: for a conventional pull the hands pass the knees about a
+ * third of the way up, and so do the shoulders when the hips and shoulders rise together. It is
+ * only an estimate (with the hips set higher the hands pass the knees later), which is why the
+ * knees are used whenever they're seen.
  */
 const KNEE_HEIGHT_SHARE_OF_RISE = 1 / 3;
 /**
@@ -101,13 +104,22 @@ export function pullOf(context: RepContext): Pull | null {
   const facing: Facing = startBar.x >= startHip.x ? 1 : -1;
   const liftoff = 1;
   const topRise = riseAt(rep.turnFrame) ?? 0;
+  const kneesSeen =
+    frames.filter(({ frame }) => sidePoint(frame, nearSide, 'Knee') !== null).length /
+    frames.length;
+  const reachesKnees = (frame: PoseFrame, index: number): boolean => {
+    if (tracker === 'hands' && kneesSeen >= HANDS_SEEN_SHARE) {
+      const hands = averagePoint(frame, WRISTS);
+      const knee = sidePoint(frame, nearSide, 'Knee');
+      return hands !== null && knee !== null && hands.y <= knee.y;
+    }
+    const rise = riseAt(index);
+    return rise !== null && rise >= topRise * KNEE_HEIGHT_SHARE_OF_RISE;
+  };
   const kneeHeight =
     topRise < FLOOR_PULL_MIN_RISE_TORSOS
       ? -1
-      : frames.findIndex(({ index }, i) => {
-          const rise = riseAt(index);
-          return i >= liftoff && rise !== null && rise >= topRise * KNEE_HEIGHT_SHARE_OF_RISE;
-        });
+      : frames.findIndex(({ frame, index }, i) => i >= liftoff && reachesKnees(frame, index));
   return {
     frames,
     facing,

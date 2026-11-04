@@ -390,9 +390,12 @@ clip the hands were seen in 92 of 1,259 frames and the shoulders in all of them.
 With the hands, the floor frame is the last one near the floor searching back
 from lockout, which skips a dip-and-rip setup. With the shoulders, it is the
 frame before they first rise, searching forward, because hips shooting up keep
-the shoulders low after the bar has left the floor. The bar counts as at the
-knees once the tracked point has covered a third of its rise to lockout, which
-is where the hands pass the knees in a conventional pull, and a pull whose
+the shoulders low after the bar has left the floor. The bar reaches the knees
+when the hands pass the knee point, if the hands are tracked and the knees are
+seen in 80% of the pull. Otherwise it counts as at the knees once the tracked
+point has covered a third of its rise to lockout, which is where the hands pass
+the knees in a conventional pull (later with the hips set higher, so this is an
+estimate). A pull whose
 tracked point rises less than 0.5 torso lengths started above the knees.
 
 The rep signal always uses the shoulders. Mixing hands and shoulders frame by

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Landmark } from '../../core';
+import { LANDMARK, type Landmark } from '../../core';
 import { sideDeadliftRep } from '../../testing/deadlift-pose';
 import { setVisibility } from '../../testing/synthetic-pose';
 import { pullOf } from './pull';
@@ -22,6 +22,28 @@ describe('pullOf', () => {
   it('finds where the hands reach the knees', () => {
     const pull = pullOf(sideDeadliftRep());
     expect(pull?.kneeHeight).toBeGreaterThan(pull?.liftoff ?? 0);
+  });
+
+  it('finds the knees from the knee point when the hands and knees are seen', () => {
+    // Knees set higher than usual (long shins), so the hands pass them well over a third of
+    // the way up: a third of the rise would end the early pull too soon.
+    const longShins = sideDeadliftRep(undefined, (landmarks) => {
+      for (const name of ['leftKnee', 'rightKnee'] as const) {
+        const knee = landmarks[LANDMARK[name]];
+        if (knee) landmarks[LANDMARK[name]] = { ...knee, y: knee.y - 0.04 };
+      }
+      return landmarks;
+    });
+    const pull = pullOf(longShins);
+    const handAboveKnee = (position: number) => {
+      const landmarks = pull?.frames[position]?.frame.landmarks;
+      const wrist = landmarks?.[LANDMARK.leftWrist];
+      const knee = landmarks?.[LANDMARK.leftKnee];
+      return wrist !== undefined && knee !== undefined && wrist.y <= knee.y;
+    };
+    const at = pull?.kneeHeight ?? -1;
+    expect(handAboveKnee(at)).toBe(true);
+    expect(handAboveKnee(at - 1)).toBe(false);
   });
 
   it('follows the bar with the hands when they are seen', () => {
