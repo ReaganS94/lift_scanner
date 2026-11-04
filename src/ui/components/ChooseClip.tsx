@@ -1,5 +1,6 @@
 import { useState, type ChangeEvent, type SubmitEvent } from 'react';
 import { liftRegistry } from '../../lifts';
+import { recordVideo } from '../platform/pick-video';
 import { loadLastLift, saveLastLift } from '../preferences/last-lift';
 import { APP_VERSION } from '../version';
 
@@ -50,11 +51,19 @@ export function ChooseClip({ onStart }: ChooseClipProps) {
       <div className="stack stack--tight">
         <span className="field-label">Video of your set</span>
         <div className="file-buttons">
-          {/* On a phone, `capture` opens the camera straight away; elsewhere it's a file picker. */}
-          <label className="file-button">
-            <input type="file" accept="video/*" capture="environment" onChange={pickFile} />
+          {/* Opens the camera on a phone, a file picker elsewhere. See recordVideo for why the
+              input is only made on tap. */}
+          <button
+            type="button"
+            className="file-button"
+            onClick={() => {
+              void recordVideo().then((recorded) => {
+                if (recorded) setFile(recorded);
+              });
+            }}
+          >
             Record set
-          </label>
+          </button>
           <label className="file-button">
             <input type="file" accept="video/*" onChange={pickFile} />
             Choose video
