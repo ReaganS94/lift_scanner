@@ -27,13 +27,6 @@ export interface Pull {
   readonly floorHandsY: number;
 }
 
-/** Whether the hands are still at the floor in this frame, or null if they weren't seen. */
-export function handsAtFloor(frame: PoseFrame, pull: Pull, torsoLength: number): boolean | null {
-  const hands = averagePoint(frame, WRISTS);
-  if (!hands) return null;
-  return isAtFloor(hands.y, pull.floorHandsY, torsoLength);
-}
-
 /** The pull of one deadlift rep, or null if the hands or hips weren't seen at the floor. */
 export function pullOf(context: RepContext): Pull | null {
   const { rep, sequence, torsoLength, nearSide } = context;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LANDMARK, type LandmarkName, type RepContext } from '../../../core';
+import { LANDMARK, type Landmark, type LandmarkName, type RepContext } from '../../../core';
 import { cleanPoses } from '../../../signal';
 import {
   between,
@@ -37,11 +37,12 @@ describe('deadlift hips rising first', () => {
   });
 
   it('warns when the torso tips forward on the way to the knees', () => {
-    // From 55° at the set position to 75°.
+    // From 55° at the set position to 75°. The first 4° happen before the bar is off the
+    // floor, and only the tipping after liftoff is judged.
     const result = hipsRiseFirst.evaluate(sideDeadliftRep(hipsFirst(75)));
     expect(result).toMatchObject({
       status: 'warn',
-      message: 'Hips rose first: the torso tipped 20° further forward on the way to the knees.',
+      message: 'Hips rose first: the torso tipped 16° further forward on the way to the knees.',
     });
   });
 
@@ -51,16 +52,26 @@ describe('deadlift hips rising first', () => {
     });
   });
 
-  it('counts hips that rise before the bar leaves the floor', () => {
-    // The same pull, but set with the hips lower (torso at 45°) before they come up to the
-    // usual 55° while the bar is still down. Measuring from liftoff would miss those 10°.
-    const valueOf = (context: RepContext) => {
-      const result = hipsRiseFirst.evaluate(context);
-      return result.status === 'skipped' ? Number.NaN : (result.value ?? Number.NaN);
-    };
-    const lowHips = sideDeadliftFigure({ shin: 25, thigh: 75, torso: 45 });
-    const setLow = sideDeadliftRep(hipsFirst(62), (landmarks, i) => (i < 5 ? lowHips : landmarks));
-    expect(valueOf(setLow) - valueOf(sideDeadliftRep(hipsFirst(62)))).toBeCloseTo(10, 0);
+  describe('a dip-and-rip setup: hips low, then rising into position before the pull', () => {
+    // Frames 0 to 4 have the hips low (torso at 35°), frames 5 to 9 rise into the usual set
+    // position, and the pull starts at frame 10. The hands stay on the bar on the floor.
+    const lowHips = sideDeadliftFigure({ shin: 25, thigh: 85, torso: 35 });
+    const handsOnBar = sideDeadliftFigure(DEADLIFT_SETUP);
+    function withDip(path?: (t: number) => DeadliftPosition): RepContext {
+      return sideDeadliftRep(path, (landmarks, i) => {
+        if (i >= 10) return landmarks;
+        const dipped = i < 5 ? lowHips : mixFigures(lowHips, landmarks, (i - 4) / 5);
+        return withHandsFrom(dipped, handsOnBar);
+      });
+    }
+
+    it('passes a good pull: rising into the set position is not a fault', () => {
+      expect(hipsRiseFirst.evaluate(withDip())).toMatchObject({ status: 'pass' });
+    });
+
+    it('still flags hips that shoot up once the bar is moving', () => {
+      expect(hipsRiseFirst.evaluate(withDip(hipsFirst(75)))).toMatchObject({ status: 'warn' });
+    });
   });
 
   it('skips a pull that starts with the bar above the knees', () => {
@@ -90,3 +101,25 @@ describe('deadlift hips rising first', () => {
     expect(passes).toBeGreaterThanOrEqual(194);
   });
 });
+
+/** Each point a fraction `t` of the way from `from` to `to`. */
+function mixFigures(from: readonly Landmark[], to: readonly Landmark[], t: number): Landmark[] {
+  return from.map((point, i) => {
+    const target = to[i] ?? point;
+    return {
+      ...point,
+      x: point.x + (target.x - point.x) * t,
+      y: point.y + (target.y - point.y) * t,
+    };
+  });
+}
+
+/** A copy of `figure` with the wrists where they are in `source`. */
+function withHandsFrom(figure: readonly Landmark[], source: readonly Landmark[]): Landmark[] {
+  const result = [...figure];
+  for (const name of ['leftWrist', 'rightWrist'] as const) {
+    const hand = source[LANDMARK[name]];
+    if (hand) result[LANDMARK[name]] = hand;
+  }
+  return result;
+}
