@@ -356,11 +356,21 @@ CI runs type checking, lint, the import rules and tests on every pull request. O
 
 ## Adapters
 
-- `adapters/video/VideoFrameSource` loads a video from a URL (the hook owns the
-  object URL for the picked file) and seeks frame by frame.
+- Adapters are built in one place, `main.tsx`, and passed to the screens as
+  `AnalysisAdapters`, so the screens can run with fakes.
+- `adapters/video/VideoFrameSource` loads a video from a URL (the screens' hook
+  owns the object URL for the picked file) and seeks frame by frame. Each load
+  and seek has a timeout, so a video the browser can't decode fails with a
+  message instead of hanging. After each seek it also waits for the new frame
+  to be shown (`requestVideoFrameCallback`), because Safari can report a seek
+  as done before the frame is decoded.
+- Each analysis run has its own `AbortController`. Cancel works during every
+  slow step, including loading the video and downloading the model.
 - `adapters/pose/MediaPipePoseEstimator` wraps MediaPipe Pose Landmarker in video
   mode and converts its output with `toSharedUnits` (see Coordinates). MediaPipe
-  needs timestamps that only increase, so it offsets each new clip's times.
+  needs timestamps that only increase, so it offsets each new clip's times. It
+  uses the GPU, and falls back to the CPU if the GPU fails at start-up or on
+  the first frame.
 - MediaPipe's WebAssembly runtime is copied from `node_modules` into
   `public/mediapipe/` by `scripts/copy-mediapipe-wasm.mjs` after every install,
   so the app serves it itself at exactly the installed version. The model file

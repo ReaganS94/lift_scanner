@@ -6,5 +6,8 @@ export function downloadJson(data: unknown, fileName: string): void {
   link.href = url;
   link.download = fileName;
   link.click();
-  URL.revokeObjectURL(url);
+  // Safari can cancel the download if the URL is released in the same task as the click.
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 1000);
 }

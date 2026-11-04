@@ -14,17 +14,40 @@ export function SkeletonOverlay({ sequence, videoRef }: SkeletonOverlayProps) {
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    const video = videoRef.current;
+    if (!canvas || !video) return;
 
-    let animationFrame = 0;
-    const draw = () => {
-      const video = videoRef.current;
-      if (video) drawFrame(canvas, sequence, Math.round(video.currentTime * sequence.sampleFps));
-      animationFrame = requestAnimationFrame(draw);
+    const drawCurrent = () => {
+      drawFrame(canvas, sequence, Math.round(video.currentTime * sequence.sampleFps));
     };
-    draw();
+
+    // Redraw every animation frame while playing; once per seek or pause otherwise.
+    let animationFrame = 0;
+    const loop = () => {
+      drawCurrent();
+      animationFrame = requestAnimationFrame(loop);
+    };
+    const onPlay = () => {
+      cancelAnimationFrame(animationFrame);
+      loop();
+    };
+    const onStop = () => {
+      cancelAnimationFrame(animationFrame);
+      drawCurrent();
+    };
+
+    const stopEvents = ['pause', 'ended', 'seeked', 'loadeddata'] as const;
+    video.addEventListener('play', onPlay);
+    for (const event of stopEvents) video.addEventListener(event, onStop);
+    window.addEventListener('resize', drawCurrent);
+    if (video.paused) drawCurrent();
+    else onPlay();
+
     return () => {
       cancelAnimationFrame(animationFrame);
+      video.removeEventListener('play', onPlay);
+      for (const event of stopEvents) video.removeEventListener(event, onStop);
+      window.removeEventListener('resize', drawCurrent);
     };
   }, [sequence, videoRef]);
 

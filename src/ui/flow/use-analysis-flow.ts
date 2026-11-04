@@ -1,20 +1,21 @@
 import { useCallback, useEffect, useReducer, useRef } from 'react';
 import { analyzeSet, ExtractionCancelledError, extractPoses, prepareClip } from '../../analysis';
-import type { View } from '../../core';
+import type { PoseEstimator, View } from '../../core';
 import { liftRegistry } from '../../lifts';
-import { MediaPipePoseEstimator } from '../../adapters/pose';
-import { VideoFrameSource } from '../../adapters/video';
+import { abortable } from './abortable';
+import type { AnalysisAdapters, DisposableFrameSource } from './adapters';
 import { flowReducer, INITIAL_FLOW } from './analysis-flow';
 
 /** Frames analysed per second of video. Enough to catch every phase of a rep. */
 const SAMPLE_FPS = 30;
 
-/** Runs the analysis pipeline for the screens, wiring in the browser adapters. */
-export function useAnalysisFlow() {
+/** Runs the analysis pipeline for the screens, using the adapters passed in. */
+export function useAnalysisFlow<TImage>(adapters: AnalysisAdapters<TImage>) {
   const [state, dispatch] = useReducer(flowReducer, INITIAL_FLOW);
-  const cancelled = useRef(false);
+  // One controller per run: Cancel aborts it, and starting a new run aborts the old one.
+  const run = useRef<AbortController | null>(null);
   // Kept between clips so the pose model only loads once.
-  const estimator = useRef<MediaPipePoseEstimator | null>(null);
+  const estimator = useRef<PoseEstimator<TImage> | null>(null);
   // The object URL for the current clip, used for analysis and playback. Released when the
   // user moves on to another clip.
   const videoUrl = useRef<string | null>(null);
@@ -24,33 +25,45 @@ export function useAnalysisFlow() {
     videoUrl.current = null;
   }, []);
 
-  useEffect(() => releaseVideo, [releaseVideo]);
+  useEffect(
+    () => () => {
+      run.current?.abort();
+      releaseVideo();
+    },
+    [releaseVideo],
+  );
 
   const start = useCallback(
     async (liftId: string, file: File) => {
+      run.current?.abort();
+      const controller = new AbortController();
+      run.current = controller;
+      const { signal } = controller;
+      // Only the latest run may change the screen.
+      const isCurrent = () => run.current === controller;
+
       releaseVideo();
       const url = URL.createObjectURL(file);
       videoUrl.current = url;
-      cancelled.current = false;
       dispatch({ type: 'start', liftId, videoUrl: url });
 
-      let source: VideoFrameSource | null = null;
+      const opening = adapters.openVideo(url);
+      let source: DisposableFrameSource<TImage> | null = null;
       try {
-        source = await VideoFrameSource.open(url);
-        estimator.current ??= new MediaPipePoseEstimator({
-          wasmBaseUrl: `${import.meta.env.BASE_URL}mediapipe/wasm`,
-        });
-        await estimator.current.init();
+        source = await abortable(opening, signal);
+        estimator.current ??= adapters.createPoseEstimator();
+        await abortable(estimator.current.init(), signal);
 
         const raw = await extractPoses(source, estimator.current, {
           sampleFps: SAMPLE_FPS,
           onProgress: (progress) => {
-            dispatch({ type: 'progress', progress });
+            if (isCurrent()) dispatch({ type: 'progress', progress });
           },
-          isCancelled: () => cancelled.current,
+          isCancelled: () => signal.aborted,
         });
-        dispatch({ type: 'extracted', raw, prepared: prepareClip(raw) });
+        if (isCurrent()) dispatch({ type: 'extracted', raw, prepared: prepareClip(raw) });
       } catch (error) {
+        if (!isCurrent()) return;
         if (error instanceof ExtractionCancelledError) {
           releaseVideo();
           dispatch({ type: 'reset' });
@@ -58,14 +71,22 @@ export function useAnalysisFlow() {
           dispatch({ type: 'failed', message: messageOf(error) });
         }
       } finally {
-        source?.dispose();
+        if (source) source.dispose();
+        // If cancelled while the video was still opening, release it once it has opened.
+        else
+          void opening.then(
+            (late) => {
+              late.dispose();
+            },
+            () => undefined,
+          );
       }
     },
-    [releaseVideo],
+    [adapters, releaseVideo],
   );
 
   const cancel = useCallback(() => {
-    cancelled.current = true;
+    run.current?.abort();
   }, []);
 
   const confirmView = useCallback(
@@ -94,6 +115,8 @@ export function useAnalysisFlow() {
   }, []);
 
   const reset = useCallback(() => {
+    run.current?.abort();
+    run.current = null;
     releaseVideo();
     dispatch({ type: 'reset' });
   }, [releaseVideo]);

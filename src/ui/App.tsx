@@ -3,10 +3,15 @@ import { ChooseClip } from './components/ChooseClip';
 import { ConfirmView } from './components/ConfirmView';
 import { ExtractionProgress } from './components/ExtractionProgress';
 import { SetResults } from './components/SetResults';
+import type { AnalysisAdapters } from './flow/adapters';
 import { useAnalysisFlow } from './flow/use-analysis-flow';
 
-export function App() {
-  const { state, start, cancel, confirmView, changeView, reset } = useAnalysisFlow();
+interface AppProps<TImage> {
+  adapters: AnalysisAdapters<TImage>;
+}
+
+export function App<TImage>({ adapters }: AppProps<TImage>) {
+  const { state, start, cancel, confirmView, changeView, reset } = useAnalysisFlow(adapters);
 
   return (
     <main className="app">
