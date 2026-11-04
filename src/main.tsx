@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { MediaPipePoseEstimator } from './adapters/pose';
 import { VideoFrameSource } from './adapters/video';
 import { App } from './ui/App';
+import { UpdateNotice } from './ui/components/UpdateNotice';
 import type { AnalysisAdapters } from './ui/flow/adapters';
 
 // The one place the browser adapters are built. Everything else receives them.
@@ -18,5 +19,7 @@ if (!root) throw new Error('Missing #root element in index.html');
 createRoot(root).render(
   <StrictMode>
     <App adapters={adapters} />
+    {/* Kept out of App so App can be rendered in tests without a service worker. */}
+    <UpdateNotice />
   </StrictMode>,
 );
