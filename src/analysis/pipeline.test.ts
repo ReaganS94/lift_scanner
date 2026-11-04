@@ -12,6 +12,8 @@ import {
   moved,
   PORTRAIT_ASPECT,
   repWave,
+  sequenceOf,
+  setVisibility,
   standingFigure,
   UPPER_BODY,
 } from '../testing/synthetic-pose';
@@ -93,6 +95,27 @@ describe('pipeline', () => {
         { checkId: 'front-only', status: 'skipped', message: 'Needs a front view.' },
       ]);
     }
+  });
+
+  it('guesses a side view when the far side is only faintly visible, as in real clips', () => {
+    const faintFarSide = squatSet(1).map((figure) => {
+      const copy = [...figure];
+      for (const name of [
+        'rightShoulder',
+        'rightElbow',
+        'rightWrist',
+        'rightHip',
+        'rightKnee',
+        'rightAnkle',
+      ] as const) {
+        setVisibility(copy, name, 0.3);
+      }
+      return copy;
+    });
+
+    const prepared = prepareClip(sequenceOf(faintFarSide));
+    expect(prepared.viewGuess).toMatchObject({ view: 'side', confidence: 'high' });
+    expect(prepared.nearSide).toBe('left');
   });
 
   it('can be cancelled part-way through extraction', async () => {

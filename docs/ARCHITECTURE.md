@@ -251,11 +251,15 @@ per rep, whether the lift starts at the top (squat, bench) or the bottom
 | Deadlift | Hand (bar) rise above the floor position | Bar on floor  |
 | Bench    | Hand (bar) drop below lockout            | Lockout       |
 
-The detector uses two thresholds (hysteresis): a rep starts when the signal
-climbs past half its typical peak and ends when it falls back below a fifth of it,
-so jitter near one threshold can't split a rep. A rep only counts if the lifter is
-seen at rest both before and after it, so a clip that starts or ends mid-rep
-doesn't produce a half rep. Each lift sets a minimum movement and duration.
+Because the signal is already in torso lengths from rest, the detector uses fixed
+thresholds rather than fractions of the set's own peak, so a single heavy rep in
+a long clip is found as reliably as a set of ten. A rep starts at the last frame
+within 0.1 torso lengths of rest, must climb past the lift's minimum amplitude,
+and ends at the first frame back within 0.1 of rest. The gap between those two
+levels (hysteresis) stops jitter from splitting a rep. A rep only counts if the
+lifter is seen at rest both before and after it, so a clip that starts or ends
+mid-rep doesn't produce a half rep, and standing around before a deadlift isn't
+mistaken for a lockout.
 
 ## Adding a new lift
 
@@ -279,9 +283,16 @@ supports:
 | Front / back | Knees caving in, left/right imbalance, stance and grip width    |
 | ~45°         | Not supported. Most measurements are distorted.                 |
 
-View detection uses simple ratios (for example, apparent shoulder width compared
-to torso length). It shows its guess and lets the user correct it, because a wrong
-view would make every check unreliable.
+View detection compares apparent shoulder width to torso length. Shoulder width
+shrinks with the cosine of the camera's angle off square-on (about 0.8 of torso
+length when facing the camera), so the cut-offs accept up to 30° off square-on
+and return no guess in between. It measures only frames where the torso looks
+full length, because leaning towards the camera shortens the torso and would
+skew the ratio. It runs on the raw poses, before cleanup drops the faint far
+side of a side view. Front and back are told apart by whether the face is
+visible and which shoulder appears on which side, and only a clear, agreeing
+answer gets high confidence. The app shows its guess and lets the user correct
+it, because a wrong view would make every check unreliable.
 
 ## Initial checks
 

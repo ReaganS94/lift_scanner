@@ -1,35 +1,32 @@
 import type { Rep, RepDetectionOptions } from '../core';
-import { percentile, type Series } from '../signal';
+import type { Series } from '../signal';
 
 /**
- * A rep starts when the signal climbs past ENTER of its typical peak, and ends when it falls
- * back below REST. The gap between the two (hysteresis) stops jitter near one threshold from
- * splitting a rep in two.
+ * The rep signal is already measured in torso lengths from the rest position, so the
+ * thresholds can be fixed distances rather than fractions of the set's own peak. That way a
+ * single heavy rep in a long clip is found as reliably as a set of ten.
+ *
+ * A frame counts as "at rest" within this distance of the rest position: small enough that a
+ * rep's start and end sit at the real start and end of the movement, large enough to absorb
+ * the jitter left after smoothing.
  */
-const ENTER_FRACTION = 0.5;
-const REST_FRACTION = 0.2;
-/** The typical peak is taken as this percentile, so one bad frame can't set it. */
-const PEAK_PERCENTILE = 0.95;
+export const REST_BAND = 0.1;
 
 /**
  * Finds the reps in a rep signal (distance from rest, in torso lengths; see LiftDefinition).
  *
- * A rep only counts if the lifter is seen at rest both before and after it, so a set filmed
- * mid-rep doesn't produce a half rep. Frame indices refer to the signal, which has one value per
- * frame of the clip.
+ * A rep starts at the last frame at rest before the signal climbs past the lift's minimum
+ * amplitude, and ends at the first frame back at rest. The gap between those two levels
+ * (hysteresis) stops jitter near one of them from splitting a rep in two. A rep only counts if
+ * the lifter is seen at rest both before and after it, so a clip that starts or ends mid-rep
+ * doesn't produce a half rep. Frame indices refer to the signal, one value per frame of the clip.
  */
 export function segmentReps(
   signal: Series,
   sampleFps: number,
   options: RepDetectionOptions,
 ): Rep[] {
-  const peak = percentile(signal, PEAK_PERCENTILE);
-  if (peak === null || peak < options.minAmplitude) return [];
-
-  const enterLevel = peak * ENTER_FRACTION;
-  const restLevel = peak * REST_FRACTION;
   const minFrames = options.minDurationSeconds * sampleFps;
-
   const reps: Rep[] = [];
   let lastRestFrame: number | null = null;
   let repStart: number | null = null;
@@ -38,16 +35,15 @@ export function segmentReps(
     if (value === null) return;
 
     if (repStart === null) {
-      if (value <= restLevel) lastRestFrame = frame;
-      else if (value >= enterLevel && lastRestFrame !== null) repStart = lastRestFrame;
+      if (value <= REST_BAND) lastRestFrame = frame;
+      else if (value >= options.minAmplitude && lastRestFrame !== null) repStart = lastRestFrame;
       return;
     }
 
-    if (value > restLevel) return;
+    if (value > REST_BAND) return;
 
-    const turnFrame = indexOfMax(signal, repStart, frame);
-    const turnValue = signal[turnFrame] ?? 0;
-    if (frame - repStart >= minFrames && turnValue >= options.minAmplitude) {
+    if (frame - repStart >= minFrames) {
+      const turnFrame = indexOfMax(signal, repStart, frame);
       reps.push({ index: reps.length, startFrame: repStart, turnFrame, endFrame: frame });
     }
     repStart = null;

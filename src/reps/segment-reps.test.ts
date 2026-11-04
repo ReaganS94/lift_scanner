@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { repWave } from '../testing/synthetic-pose';
-import { segmentReps } from './segment-reps';
+import { REST_BAND, segmentReps } from './segment-reps';
 
 const FPS = 30;
 const OPTIONS = { minAmplitude: 0.3, minDurationSeconds: 0.5 };
@@ -18,6 +18,21 @@ describe('segmentReps', () => {
       // Each rep peaks halfway through its 60 frames.
       expect(rep.turnFrame).toBe(20 + index * 80 + 30);
     });
+  });
+
+  it('finds a single rep in a long clip, such as a heavy single with a long setup', () => {
+    const signal = repWave({ reps: 1, repFrames: 60, restFrames: 20 * FPS, amplitude: 1 });
+    expect(segmentReps(signal, FPS, OPTIONS)).toHaveLength(1);
+  });
+
+  it('starts and ends each rep at rest, so the whole movement is inside it', () => {
+    const signal = repWave({ reps: 2, repFrames: 60, restFrames: 20, amplitude: 1 });
+    for (const rep of segmentReps(signal, FPS, OPTIONS)) {
+      expect(signal[rep.startFrame]).toBeLessThanOrEqual(REST_BAND);
+      expect(signal[rep.endFrame]).toBeLessThanOrEqual(REST_BAND);
+      // The frame after the start is already moving: the start is the last frame at rest.
+      expect(signal[rep.startFrame + 1]).toBeGreaterThan(signal[rep.startFrame] ?? Infinity);
+    }
   });
 
   it('ignores movement smaller than the minimum amplitude', () => {

@@ -8,10 +8,12 @@ import { percentile } from './stats';
 export type RestAt = 'min' | 'max';
 
 /**
- * A robust estimate of the extreme: the 10th or 90th percentile rather than the true minimum
- * or maximum, so a few bad detections can't set the rest position.
+ * A robust estimate of the extreme: the 3rd or 97th percentile rather than the true minimum
+ * or maximum, so a few bad detections can't set the rest position. It sits close to the
+ * extreme because the lifter can spend most of a clip away from rest: standing before a
+ * deadlift, or bracing before a heavy single.
  */
-const REST_PERCENTILE = { min: 0.1, max: 0.9 } as const;
+const REST_PERCENTILE = { min: 0.03, max: 0.97 } as const;
 
 /**
  * Turns a raw position series into distance from the rest position, divided by `scale` (the

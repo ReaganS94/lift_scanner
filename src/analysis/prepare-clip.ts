@@ -13,13 +13,19 @@ export interface PreparedClip {
   readonly viewGuess: ViewGuess;
 }
 
-/** Step 2: cleans the raw poses and guesses the camera view for the user to confirm. */
+/**
+ * Step 2: cleans the raw poses and guesses the camera view for the user to confirm.
+ *
+ * The view and near side are judged from the raw poses: cleanup drops faint points, and in a
+ * side view the far shoulder and hip are always faint, yet their rough positions and
+ * visibility are exactly the evidence those two judgements need.
+ */
 export function prepareClip(raw: PoseSequence): PreparedClip {
   const sequence = cleanPoses(raw);
   return {
     sequence,
     torsoLength: torsoLength(sequence.frames),
-    nearSide: nearSide(sequence.frames),
-    viewGuess: detectView(sequence),
+    nearSide: nearSide(raw.frames),
+    viewGuess: detectView(raw),
   };
 }

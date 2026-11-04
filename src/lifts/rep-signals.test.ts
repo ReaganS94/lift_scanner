@@ -47,6 +47,27 @@ describe('rep signals', () => {
     );
   });
 
+  it('deadlift: a heavy single with standing around before and after', () => {
+    // Stands holding nothing for 10 s, bends to the bar, one 2 s pull, back to the floor,
+    // stands up again. Standing has the hands as high as lockout, but no rest comes before
+    // the first standing period or after the last, so only the pull counts.
+    const standing = standingFigure('side');
+    const atFloor = moved(standing, HANDS, 0, 0.2);
+    const pull = repWave({ reps: 1, repFrames: 60, restFrames: 45, amplitude: 0.8 });
+    const frames = [
+      ...Array.from({ length: 300 }, () => standing),
+      ...pull.map((amount) => moved(atFloor, HANDS, 0, -amount * TORSO)),
+      ...Array.from({ length: 300 }, () => standing),
+    ];
+    const clip: ClipContext = {
+      sequence: sequenceOf(frames),
+      view: 'side',
+      torsoLength: TORSO,
+      nearSide: 'left',
+    };
+    expect(segmentReps(deadlift.repSignal(clip), 30, deadlift.repDetection)).toHaveLength(1);
+  });
+
   it('bench: bar lowering from lockout', () => {
     expectThreeReps(bench, setOf(HANDS, 1, 0.5), 0.5);
   });

@@ -1,1 +1,1 @@
-export { segmentReps } from './segment-reps';
+export { REST_BAND, segmentReps } from './segment-reps';
