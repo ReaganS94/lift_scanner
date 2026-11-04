@@ -35,6 +35,36 @@ describe('segmentReps', () => {
     }
   });
 
+  it('splits touch-and-go reps that never quite return to rest', () => {
+    // Five reps that stop 0.12 torso lengths short of standing between them.
+    const bouncing = repWave({ reps: 5, repFrames: 60, restFrames: 0, amplitude: 0.88 }).map(
+      (value) => value + 0.12,
+    );
+    const rest = Array.from({ length: 20 }, () => 0);
+    const reps = segmentReps([...rest, ...bouncing, ...rest], FPS, OPTIONS);
+
+    expect(reps).toHaveLength(5);
+    reps.forEach((rep, index) => {
+      expect(rep.turnFrame).toBe(20 + index * 60 + 30);
+    });
+    // Each rep after the first starts where the one before it ended.
+    for (let i = 1; i < reps.length; i++) {
+      expect(reps[i]?.startFrame).toBe(reps[i - 1]?.endFrame);
+    }
+  });
+
+  it('does not split a rep on a small wobble partway through', () => {
+    // A dip of 0.1 (less than half the 0.3 minimum amplitude) on the way down.
+    const wave: (number | null)[] = repWave({
+      reps: 1,
+      repFrames: 60,
+      restFrames: 20,
+      amplitude: 1,
+    });
+    for (let frame = 30; frame < 35; frame++) wave[frame] = (wave[frame] ?? 0) - 0.1;
+    expect(segmentReps(wave, FPS, OPTIONS)).toHaveLength(1);
+  });
+
   it('ignores movement smaller than the minimum amplitude', () => {
     const signal = repWave({ reps: 3, repFrames: 60, restFrames: 20, amplitude: 0.1 });
     expect(segmentReps(signal, FPS, OPTIONS)).toEqual([]);
