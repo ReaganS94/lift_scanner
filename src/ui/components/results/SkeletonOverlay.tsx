@@ -1,6 +1,11 @@
 import { useEffect, useRef, type RefObject } from 'react';
 import type { BodyJoint, PoseSequence } from '../../../core';
-import { drawSkeleton, fitCanvas, themeColour } from '../../skeleton/draw-skeleton';
+import {
+  drawSkeleton,
+  fitCanvas,
+  themeColour,
+  type SkeletonStyle,
+} from '../../skeleton/draw-skeleton';
 
 /** Joints to pick out in a result's colour, while paused on the frame it was measured at. */
 export interface SkeletonHighlight {
@@ -22,10 +27,14 @@ interface SkeletonOverlayProps {
 export function SkeletonOverlay({ sequence, videoRef, highlight }: SkeletonOverlayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const highlightRef = useRef(highlight);
+  // Colours are read from the theme once per highlight, not on every animation frame.
+  const styleRef = useRef<SkeletonStyle | null>(null);
   const redrawRef = useRef<() => void>(() => undefined);
 
   useEffect(() => {
     highlightRef.current = highlight;
+    const canvas = canvasRef.current;
+    if (canvas) styleRef.current = skeletonStyle(canvas, highlight);
     redrawRef.current();
   }, [highlight]);
 
@@ -34,13 +43,10 @@ export function SkeletonOverlay({ sequence, videoRef, highlight }: SkeletonOverl
     const video = videoRef.current;
     if (!canvas || !video) return;
 
+    styleRef.current ??= skeletonStyle(canvas, highlightRef.current);
     const drawCurrent = () => {
-      drawFrame(
-        canvas,
-        sequence,
-        Math.round(video.currentTime * sequence.sampleFps),
-        highlightRef.current,
-      );
+      const style = styleRef.current ?? skeletonStyle(canvas, highlightRef.current);
+      drawFrame(canvas, sequence, Math.round(video.currentTime * sequence.sampleFps), style);
     };
     redrawRef.current = drawCurrent;
 
@@ -78,22 +84,12 @@ export function SkeletonOverlay({ sequence, videoRef, highlight }: SkeletonOverl
   return <canvas ref={canvasRef} className="skeleton-overlay" aria-hidden="true" />;
 }
 
-function drawFrame(
+/** The skeleton's colours from the theme (styles/theme.css), with the highlight if any. */
+function skeletonStyle(
   canvas: HTMLCanvasElement,
-  sequence: PoseSequence,
-  frameIndex: number,
   highlight: SkeletonHighlight | null,
-) {
-  fitCanvas(canvas);
-  const context = canvas.getContext('2d');
-  if (!context) return;
-  context.clearRect(0, 0, canvas.width, canvas.height);
-
-  const landmarks = sequence.frames[frameIndex]?.landmarks;
-  if (!landmarks) return;
-
-  // Colours come from the theme (styles/theme.css), so the overlay matches the rest of the app.
-  drawSkeleton(context, landmarks, canvas.height, {
+): SkeletonStyle {
+  return {
     colour: themeColour(canvas, 'accent', '#c8f031'),
     ...(highlight && {
       focus: {
@@ -101,5 +97,20 @@ function drawFrame(
         colour: themeColour(canvas, highlight.status, '#fb4d6d'),
       },
     }),
-  });
+  };
+}
+
+function drawFrame(
+  canvas: HTMLCanvasElement,
+  sequence: PoseSequence,
+  frameIndex: number,
+  style: SkeletonStyle,
+) {
+  fitCanvas(canvas);
+  const context = canvas.getContext('2d');
+  if (!context) return;
+  context.clearRect(0, 0, canvas.width, canvas.height);
+
+  const landmarks = sequence.frames[frameIndex]?.landmarks;
+  if (landmarks) drawSkeleton(context, landmarks, canvas.height, style);
 }

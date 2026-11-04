@@ -24,7 +24,7 @@ export const touchPoint: FormCheck = {
   id: ID,
   label: 'Touch point',
   supportedViews: ['side'],
-  focus: ['elbow', 'wrist'],
+  focus: ['shoulder', 'wrist', 'hip'],
   evaluate(context: RepContext): CheckResult {
     const radius = TOUCH_WINDOW_SECONDS * context.sequence.sampleFps;
     const near = repFrames(context).filter(

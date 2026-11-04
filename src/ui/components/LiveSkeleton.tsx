@@ -31,6 +31,7 @@ export function LiveSkeleton({ livePose }: LiveSkeletonProps) {
     const frame = frameRef.current;
     if (!canvas || !frame) return;
 
+    const colour = themeColour(canvas, 'accent', '#c8f031');
     let animationFrame = 0;
     let lastTimeMs: number | null = null;
     const draw = () => {
@@ -46,9 +47,7 @@ export function LiveSkeleton({ livePose }: LiveSkeletonProps) {
       if (!context) return;
       context.clearRect(0, 0, canvas.width, canvas.height);
       if (live.pose.landmarks) {
-        drawSkeleton(context, live.pose.landmarks, canvas.height, {
-          colour: themeColour(canvas, 'accent', '#c8f031'),
-        });
+        drawSkeleton(context, live.pose.landmarks, canvas.height, { colour });
       }
     };
     draw();
