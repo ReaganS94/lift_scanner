@@ -14,8 +14,9 @@ export function UpdateNotice() {
       if (!registration) return;
       // An app opened from the home screen is often resumed rather than reloaded, and only a
       // reload would look for a new version, so look whenever the app comes back into view.
+      // With no signal the look fails; that's fine, the next one will try again.
       document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') void registration.update();
+        if (document.visibilityState === 'visible') registration.update().catch(() => undefined);
       });
     },
   });
