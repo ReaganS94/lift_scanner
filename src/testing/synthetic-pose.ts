@@ -116,6 +116,14 @@ export function moved(
   return result;
 }
 
+/** A copy of the landmarks flipped left to right, as if filmed from the opposite side. */
+export function mirrored(
+  landmarks: readonly Landmark[],
+  aspectRatio = PORTRAIT_ASPECT,
+): Landmark[] {
+  return landmarks.map((point) => ({ ...point, x: aspectRatio - point.x }));
+}
+
 export function setVisibility(landmarks: Landmark[], name: LandmarkName, visibility: number): void {
   const point = landmarks[LANDMARK[name]];
   if (point) landmarks[LANDMARK[name]] = { ...point, visibility };

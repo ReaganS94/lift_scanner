@@ -4,9 +4,10 @@ Review your squat, deadlift and bench press form from a video recorded on your
 phone. Everything runs in the browser on your device: the video is never uploaded.
 
 **Status:** finds and times your reps and shows the tracked skeleton over the
-video. Squat checks (depth, torso angle, knees caving in) and deadlift checks
-(hips rising first, lockout, bar path) are in, with starting thresholds still to
-be tuned on real clips. Bench checks are next. The design is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md); read
+video. Squat checks (depth, torso angle, knees caving in), deadlift checks
+(hips rising first, lockout, bar path) and bench checks (touch point, lockout,
+uneven press) are in, with starting thresholds still to be tuned on real clips.
+The design is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md); read
 it before adding code.
 
 ## How it will work
