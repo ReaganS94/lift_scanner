@@ -1,0 +1,38 @@
+{
+  // The pure modules (see docs/ARCHITECTURE.md, "Dependency rules") are checked a second time
+  // here without the DOM or Node type definitions, so any use of a browser or Node API in them
+  // is a type error. tsconfig.app.json checks the whole app with the DOM.
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.pure.tsbuildinfo",
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "types": [],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": [
+    "src/core",
+    "src/geometry",
+    "src/signal",
+    "src/view",
+    "src/reps",
+    "src/lifts",
+    "src/analysis",
+    "src/report",
+    "src/testing"
+  ]
+}

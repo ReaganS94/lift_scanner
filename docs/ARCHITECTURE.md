@@ -96,6 +96,7 @@ src/
     storage/
       indexeddb.ts
   ui/            React screens and components. The only layer that renders.
+  testing/       Builders for fake pose data. Only tests may import it.
   main.tsx       App entry point: builds adapters and mounts the React app.
 tests/
   fixtures/      Recorded pose sequences (JSON) from real clips.
@@ -106,26 +107,60 @@ docs/
 
 ### Dependency rules
 
-Arrows point from a module to what it may import.
+Arrows point from a module to what it may import. Every layer may also import
+`core`.
 
 ```
-ui ──▶ analysis ──▶ lifts ──▶ reps, view, signal, geometry ──▶ core
- │         │                                                    ▲
- │         └──────────────▶ report ─────────────────────────────┤
- └──▶ adapters ─────────────────────────────────────────────────┘
+ui ──▶ analysis ──▶ view, reps, lifts ──▶ geometry ◀──▶ signal ──▶ core
+ │         └──────▶ report ─────────────────────────────────────────▲
+ └──▶ adapters ─────────────────────────────────────────────────────┘
 ```
+
+| Layer                  | May import (besides itself and `core`)                  |
+| ---------------------- | ------------------------------------------------------- |
+| `core`                 | nothing                                                 |
+| `geometry`             | `signal`                                                |
+| `signal`               | `geometry`                                              |
+| `view`                 | `geometry`, `signal`                                    |
+| `reps`                 | `geometry`, `signal`                                    |
+| `lifts`                | `geometry`, `signal` (and never another lift's folder)  |
+| `report`               | nothing                                                 |
+| `analysis`             | `geometry`, `signal`, `view`, `reps`, `lifts`, `report` |
+| `adapters`             | nothing                                                 |
+| `ui`                   | anything except `testing`                               |
+| `testing` (tests only) | nothing; only `*.test.ts` files may import it           |
 
 - `core`, `geometry`, `signal`, `view`, `reps`, `lifts`, `analysis` and `report`
   are **pure TypeScript**. They don't touch the DOM, the camera, files or
   storage. That makes them fast to unit test in Node with recorded fixtures.
 - Only `adapters` and `ui` touch browser APIs.
-- `analysis` receives adapters through its constructor (dependency injection), so
-  tests can pass fakes.
-- Lifts never import each other. Shared helpers go in `geometry`, `signal` or
-  `reps`.
+- `analysis` receives adapters as arguments (dependency injection), so tests can
+  pass fakes.
+- The image type that flows from a `FrameSource` to a `PoseEstimator` is a type
+  parameter, so `core` never names a browser type. The adapters agree on it.
 
-These rules are enforced in CI with `dependency-cruiser`, so a wrong import fails
-the build instead of relying on review.
+Three tools enforce this in CI, so a wrong import fails the build instead of
+relying on review:
+
+- `dependency-cruiser` checks the table above (`.dependency-cruiser.cjs`).
+- `tsconfig.pure.json` type-checks the pure folders a second time without the DOM
+  or Node type definitions, so `document`, `URL`, `setTimeout` and the like are
+  type errors there.
+- ESLint bans the common browser globals in the pure folders with a readable
+  message.
+
+## Coordinates
+
+The pose model reports positions as fractions of the frame's width and height.
+On a portrait 9:16 clip that squashes the x axis, so a true 45° angle would read
+about 29°. To avoid that, **pose adapters convert landmarks into one shared unit,
+the frame's height**: y runs from 0 (top) to 1 (bottom) and x from 0 to the
+frame's aspect ratio. Distances and angles are then true to the image everywhere
+downstream, and no other module needs to know the video's shape.
+`PoseSequence.aspectRatio` is kept for drawing the skeleton over the video.
+
+Distances are compared in **torso lengths** (median shoulder-to-hip distance over
+the clip), so thresholds work whether the lifter is near or far from the camera.
 
 ## Key interfaces
 
@@ -136,8 +171,8 @@ against. The code in `src/core/` is the source of truth; this is a summary.
 type View = 'side' | 'front' | 'back';
 
 interface Landmark {
-  x: number; // normalised image coordinates, 0..1
-  y: number;
+  x: number; // 0..aspect ratio, in units of frame height (see Coordinates)
+  y: number; // 0..1, grows downwards
   z: number; // model's depth estimate; treat as rough
   visibility: number; // 0..1 confidence
 }
@@ -147,46 +182,68 @@ interface PoseFrame {
   landmarks: Landmark[] | null; // null when no person was found
 }
 
-interface PoseEstimator {
+interface PoseSequence {
+  sampleFps: number;
+  aspectRatio: number;
+  frames: PoseFrame[];
+}
+
+interface PoseEstimator<TImage> {
   init(): Promise<void>;
-  estimate(frame: SampledFrame): Promise<PoseFrame>; // SampledFrame = { timeMs, image }
+  estimate(frame: SampledFrame<TImage>, aspectRatio: number): Promise<PoseFrame>;
   dispose(): void;
 }
 
+// Every frame index in the app refers to the whole clip's PoseSequence.
 interface Rep {
   index: number;
-  startFrame: number;
-  turnFrame: number; // the turning point: bottom of a squat, bar on chest
-  endFrame: number;
+  startFrame: number; // last frame at rest before the rep
+  turnFrame: number; // furthest from rest: squat bottom, bar on chest, deadlift lockout
+  endFrame: number; // first frame back at rest
 }
 
-interface CheckResult {
-  checkId: string;
-  status: 'pass' | 'warn' | 'fail' | 'skipped';
-  message: string; // plain language, e.g. "Hip crease stayed above the knee"
-  value?: number; // the measured number, e.g. a depth angle
-  frameIndex?: number; // where to jump to in the video
-  skippedReason?: string; // e.g. "Needs a side view"
+type CheckResult =
+  | { checkId; status: 'pass' | 'warn' | 'fail'; message; value?; frameIndex? }
+  | { checkId; status: 'skipped'; message }; // message says why
+
+interface ClipContext {
+  sequence: PoseSequence; // cleaned
+  view: View; // confirmed by the user
+  torsoLength: number;
+}
+
+interface RepContext extends ClipContext {
+  rep: Rep;
 }
 
 interface FormCheck {
   id: string;
   label: string;
   supportedViews: View[];
-  evaluate(rep: RepContext): CheckResult;
+  evaluate(context: RepContext): CheckResult;
 }
 
 interface LiftDefinition {
   id: string; // 'squat'
   name: string; // 'Back squat'
   supportedViews: View[];
-  repSignal(frames: PoseFrame[], view: View): (number | null)[];
+  repSignal(clip: ClipContext): (number | null)[]; // see Rep detection
+  repDetection: { minAmplitude: number; minDurationSeconds: number };
   checks: FormCheck[];
 }
 ```
 
-`RepContext` gives a check the rep's frames, the view and helper accessors, so each
-check is a small pure function that is easy to test on its own.
+Each check is a small pure function of one `RepContext`, so it is easy to test on
+its own.
+
+### Rep detection
+
+Each lift supplies a **rep signal**: per frame, how far the lifter is from their
+rest position, in torso lengths. The rest position is where the lifter waits
+between reps: standing for a squat, arms locked out for a bench press, bar on the
+floor for a deadlift. So every lift's signal sits near 0 at rest and peaks once
+per rep, whether the lift starts at the top (squat, bench) or the bottom
+(deadlift), and one generic rep detector in `reps/` works for all of them.
 
 ## Adding a new lift
 
@@ -258,8 +315,8 @@ are trusted.
 | Local history      | IndexedDB, via a small wrapper                                        | Free |
 | CI and hosting     | GitHub Actions and GitHub Pages                                       | Free |
 
-CI runs type checking, lint, the import rules and tests on every pull request, and
-deploys `main` to GitHub Pages.
+CI runs type checking, lint, the import rules and tests on every pull request. On
+`main`, it deploys to GitHub Pages only after those checks pass.
 
 ## Performance
 
