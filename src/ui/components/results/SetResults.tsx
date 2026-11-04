@@ -12,6 +12,7 @@ import { PlaybackControls } from './PlaybackControls';
 import { RepDetail } from './RepDetail';
 import { RepGrid } from './RepGrid';
 import { RepSignalChart } from './RepSignalChart';
+import { ResultsActions } from './ResultsActions';
 import { SkeletonOverlay } from './SkeletonOverlay';
 
 interface SetResultsProps {
@@ -183,19 +184,12 @@ export function SetResults({
         </p>
       )}
 
-      <div className="row">
-        <button type="button" className="primary" onClick={onStartOver}>
-          Analyse another set
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            downloadJson(raw, `${report.liftId}-poses.json`);
-          }}
-        >
-          Download pose data
-        </button>
-      </div>
+      <ResultsActions
+        onStartOver={onStartOver}
+        onDownloadPoses={() => {
+          downloadJson(raw, `${report.liftId}-poses.json`);
+        }}
+      />
     </div>
   );
 }

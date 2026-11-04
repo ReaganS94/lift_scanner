@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { frameAtTime, repAtFrame, stepFrame } from './frames';
+import { frameAtTime, repAtFrame, seekTimeOfFrame, stepFrame } from './frames';
 
 const reps = [
   { index: 0, startFrame: 10, turnFrame: 20, endFrame: 30 },
@@ -33,5 +33,13 @@ describe('stepFrame', () => {
     expect(stepFrame(0, -1, 100)).toBe(0);
     expect(stepFrame(99, 1, 100)).toBe(99);
     expect(stepFrame(50, 1, 100)).toBe(51);
+  });
+});
+
+describe('seekTimeOfFrame', () => {
+  it('lands just past the frame start, and still reads back as that frame', () => {
+    const time = seekTimeOfFrame(30, 30);
+    expect(time).toBeGreaterThan(1);
+    expect(frameAtTime(time, 30)).toBe(30);
   });
 });
