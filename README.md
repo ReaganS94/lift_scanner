@@ -12,7 +12,7 @@ it before adding code.
 ## How it will work
 
 1. Record a set with the phone side-on (or front-on for some checks), with your
-   whole body in frame.
+   whole body in frame and the phone level.
 2. Open Lift Scanner, choose the lift and the clip.
 3. Confirm the camera view the app detected.
 4. Get a rep-by-rep report, with each issue linked to the moment in the video.

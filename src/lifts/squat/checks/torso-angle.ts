@@ -3,12 +3,16 @@ import { angleFromVertical, sidePoint } from '../../../geometry';
 import { squatBottom } from '../bottom';
 
 /**
- * Forward lean of the torso at the bottom, in degrees from vertical. Set loose enough that a
- * typical low-bar squat, which leans more than a high-bar one, passes.
+ * Forward lean of the torso at the bottom, in degrees from vertical, above which the rep gets a
+ * warning. Set loose enough that a typical low-bar squat, which leans more than a high-bar
+ * one, passes.
+ *
+ * This check never fails a rep. How far the torso leans mostly comes down to build (thigh
+ * length against torso length) and bar position rather than technique, so a long-legged
+ * lifter can lean past any fixed line on every good rep. The faults that do show up as lean,
+ * such as the chest dropping out of the hole, need their own checks.
  */
 const PASS_UP_TO_DEGREES = 55;
-/** Leaning past this is a fail; between the two is a warning. */
-const WARN_UP_TO_DEGREES = 65;
 
 const ID = 'squat.torso-angle';
 
@@ -31,14 +35,18 @@ export const torsoAngle: FormCheck = {
     }
 
     const degrees = Math.round(lean);
-    const status =
-      degrees <= PASS_UP_TO_DEGREES ? 'pass' : degrees <= WARN_UP_TO_DEGREES ? 'warn' : 'fail';
+    const measured = { checkId: ID, value: lean, frameIndex: bottom.frameIndex };
+    if (degrees <= PASS_UP_TO_DEGREES) {
+      return {
+        ...measured,
+        status: 'pass',
+        message: `Torso leaned ${String(degrees)}° forward at the bottom.`,
+      };
+    }
     return {
-      checkId: ID,
-      status,
-      message: `Torso leaned ${String(degrees)}° forward at the bottom.`,
-      value: lean,
-      frameIndex: bottom.frameIndex,
+      ...measured,
+      status: 'warn',
+      message: `Torso leaned ${String(degrees)}° forward at the bottom, more than usual.`,
     };
   },
 };

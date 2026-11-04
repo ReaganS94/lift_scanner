@@ -22,17 +22,18 @@ describe('squat torso angle', () => {
     const result = torsoAngle.evaluate(
       sideSquatRep({ thighBelowParallel: PARALLEL, torsoLean: 60 }),
     );
-    expect(result).toMatchObject({ status: 'warn' });
+    expect(result).toMatchObject({
+      status: 'warn',
+      message: 'Torso leaned 60° forward at the bottom, more than usual.',
+    });
   });
 
-  it('fails a lean past 65°', () => {
+  it('never fails a rep, however far it leans', () => {
+    // Lean mostly reflects build and bar position, not technique.
     const result = torsoAngle.evaluate(
-      sideSquatRep({ thighBelowParallel: PARALLEL, torsoLean: 70 }),
+      sideSquatRep({ thighBelowParallel: PARALLEL, torsoLean: 75 }),
     );
-    expect(result).toMatchObject({
-      status: 'fail',
-      message: 'Torso leaned 70° forward at the bottom.',
-    });
+    expect(result).toMatchObject({ status: 'warn' });
   });
 
   it('skips a rep where the shoulder is hidden at the bottom', () => {

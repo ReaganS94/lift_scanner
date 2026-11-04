@@ -53,6 +53,10 @@ export function ChooseClip({ onStart }: ChooseClipProps) {
           <li>Keep your whole body in frame for the whole set.</li>
           <li>Film from straight side-on, or straight from the front or back. Avoid 45°.</li>
           <li>Prop the phone at about hip height, a few metres away, and keep it still.</li>
+          <li>
+            Keep the phone level. Depth and torso angle are measured against the edges of the
+            picture, so a phone tilted 5° shifts them by 5°.
+          </li>
           <li>Start recording before your first rep and stop after your last.</li>
         </ul>
       </details>
