@@ -278,6 +278,14 @@ by a climb of at least as much past the minimum amplitude. The next rep starts a
 the bottom of that dip. Smaller wobbles, and a grinding rep that sinks back
 partway through without getting near rest, don't split a rep.
 
+The last rep of a clip may not get back to rest either: after the final
+deadlift, a lifter often puts the bar down and stands straight up, so their
+shoulders never return to the set position (in the first real clip they came
+back to about 0.45 torso lengths above it). A rep still open when the clip ends
+therefore counts if, after its peak, the signal came at least halfway back to
+rest, and it ends at its lowest point after the peak. A clip cut off at or near
+the top of a rep still doesn't count it.
+
 ## Adding a new lift
 
 1. Create `src/lifts/<lift-name>/index.ts` exporting a `LiftDefinition`.

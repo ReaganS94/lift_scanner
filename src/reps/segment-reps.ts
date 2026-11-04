@@ -12,6 +12,9 @@ import type { Series } from '../signal';
  */
 export const REST_BAND = 0.1;
 
+/** How far back towards rest, as a share of its peak, the clip's last rep must come to count. */
+export const FINAL_REP_RETURN = 0.5;
+
 /**
  * Finds the reps in a rep signal (distance from rest, in torso lengths; see LiftDefinition).
  *
@@ -26,6 +29,12 @@ export const REST_BAND = 0.1;
  * below the rep's peak, followed by a climb of at least as much that passes the minimum
  * amplitude again. The next rep starts at that dip. Smaller wobbles, and a grinding rep that
  * sinks back partway through but never gets near rest, don't split a rep.
+ *
+ * The last rep of a clip may not get back to rest: a lifter who puts the deadlift bar down and
+ * stands straight up never returns to their set position. So a rep still open when the clip
+ * ends counts if, after its peak, the signal came at least FINAL_REP_RETURN of the way back to
+ * rest. It ends at its lowest point after the peak. A clip cut off at or near the top of a rep
+ * still doesn't count it.
  *
  * Frame indices refer to the signal, one value per frame of the clip.
  */
@@ -82,6 +91,12 @@ export function segmentReps(
       rep = { startFrame: rep.dip.frame, peak: value, dip: null };
     }
   });
+
+  // forEach hides the assignments above from TypeScript, which would narrow `rep` to null.
+  const last = rep as OpenRep | null;
+  if (last?.dip && last.dip.value <= last.peak * (1 - FINAL_REP_RETURN)) {
+    addRep(last.startFrame, last.dip.frame);
+  }
 
   return reps;
 }
