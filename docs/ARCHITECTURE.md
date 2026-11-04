@@ -79,20 +79,21 @@ src/
     registry.ts
     squat/
       index.ts         The lift definition (views, rep signal, checks).
-      checks/
+      rep-signal.ts
+      bottom.ts        Finds the bottom of a rep, shared by the side-view checks.
+      checks/          One file per check, each with its own test.
         depth.ts
         torso-angle.ts
-        knee-valgus.ts
-      squat.test.ts
+        knees-caving.ts
     deadlift/
     bench/
   analysis/      The pipeline that wires the steps together.
   report/        The report model and its serialisation.
   adapters/      Code that talks to the outside world, behind interfaces
     pose/          from core/. Swappable and mockable.
-      mediapipe.ts
+      mediapipe-pose-estimator.ts
     video/
-      html-video.ts
+      video-frame-source.ts
     storage/
       indexeddb.ts
   ui/            React screens and components. The only layer that renders.
@@ -318,6 +319,43 @@ are trusted.
 | Bench    | Full lockout                           | Side         |
 | Bench    | Uneven press (one arm lagging)         | Front / back |
 | All      | Rep tempo (time down and up)           | Any          |
+
+### Squat checks
+
+Built. Depth and torso angle need a side view and measure the near side of the
+body at the bottom of the rep: the frame within 0.25 s of where the hips were
+lowest that has the thigh furthest below parallel. Knees caving in needs a
+front or back view and looks at every frame of the rep. These thresholds are
+starting points, to be tuned on real clips.
+
+| Check           | Measures                                                              | Pass                 | Warn            | Fail                |
+| --------------- | --------------------------------------------------------------------- | -------------------- | --------------- | ------------------- |
+| Depth           | Thigh angle, hip joint vs knee joint                                  | At parallel or below | Up to 10° above | More than 10° above |
+| Torso angle     | Hip-to-shoulder lean from vertical                                    | Up to 55°            | Over 55°        | Never               |
+| Knees caving in | Knee gap as a share of ankle gap, vs standing at the start of the rep | Narrows by up to 10% | 10% to 20%      | Over 20%            |
+
+- **Depth** uses joint centres, because the model doesn't find the hip crease or
+  the top of the knee. Hip joint level with the knee joint is a little shallower
+  than the competition rule (hip crease below the top of the knee), so a rep
+  that only just passes here might not pass in a meet.
+- **Torso angle** never fails a rep. How far the torso leans mostly comes down to
+  build (thigh length against torso length) and bar position, not technique, so
+  a long-legged lifter can lean past any fixed line on every good rep. It warns
+  past 55°, loose enough for a typical low-bar squat. Faults that show up as
+  lean, such as the chest dropping out of the hole, need their own checks.
+- **Knees caving in** compares each rep with its own start, so a wide or narrow
+  stance doesn't matter. The knee gap is smoothed with a rolling median over
+  0.25 s first, so narrowing has to last about 0.15 s to count: the narrowest
+  single frame is usually landmark jitter. On synthetic reps with realistic
+  jitter, this cut false warnings on good reps from about 1 in 4 to about 1 in 70.
+  It skips reps with the feet close together, where small knee movements look
+  large.
+- **Camera tilt** shifts depth and torso angle one for one, because both are
+  measured against the edges of the picture. The filming tips ask for a level
+  phone. A later version could estimate the tilt from the clip.
+- **Around parallel**, depth is probably only good to a few degrees. Once real
+  clips show the actual spread, a small "about parallel" band may be fairer than
+  a hard line at 0°.
 
 ## Testing
 

@@ -19,3 +19,15 @@ export function percentile(series: Series, fraction: number): number | null {
 export function median(series: Series): number | null {
   return percentile(series, 0.5);
 }
+
+/**
+ * Each value replaced by the median of the measured values within `radius` frames of it. Unlike
+ * an average, a single outlier can't move it, so a minimum taken afterwards reflects a value
+ * that held for at least half the window rather than one noisy frame. Null where the value
+ * itself is missing.
+ */
+export function rollingMedian(series: Series, radius: number): (number | null)[] {
+  return series.map((value, index) =>
+    value === null ? null : median(series.slice(Math.max(0, index - radius), index + radius + 1)),
+  );
+}
