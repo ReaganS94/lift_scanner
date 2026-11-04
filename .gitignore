@@ -8,3 +8,6 @@ coverage/
 *.mp4
 *.mov
 *.webm
+
+# Copied from node_modules by scripts/copy-mediapipe-wasm.mjs
+public/mediapipe/
