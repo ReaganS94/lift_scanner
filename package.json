@@ -19,6 +19,7 @@
     "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm deps:check && pnpm test"
   },
   "dependencies": {
+    "@fontsource/barlow-condensed": "^5.3.0",
     "@mediapipe/tasks-vision": "^1.2.2",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"

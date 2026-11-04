@@ -1,14 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <!-- Full-bleed square, so the same image works as a maskable icon: everything that matters
        sits inside the central circle (radius 205) that every mask shape keeps. -->
-  <rect width="512" height="512" fill="#0b1120"/>
-  <g fill="none" stroke="#38bdf8" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
+  <rect width="512" height="512" fill="#0a0b0d"/>
+  <g fill="none" stroke="#c8f031" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
     <path d="M124 180 V124 H180"/>
     <path d="M332 124 H388 V180"/>
     <path d="M388 332 V388 H332"/>
     <path d="M180 388 H124 V332"/>
   </g>
-  <g fill="#e5e7eb">
+  <g fill="#f4f4f5">
     <rect x="140" y="245" width="232" height="22" rx="11"/>
     <rect x="178" y="188" width="30" height="136" rx="9"/>
     <rect x="304" y="188" width="30" height="136" rx="9"/>

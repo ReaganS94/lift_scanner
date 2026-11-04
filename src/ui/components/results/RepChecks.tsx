@@ -1,5 +1,5 @@
 import type { CheckResult } from '../../../core';
-import { STATUS_TEXT } from './status-badge';
+import { badgeStagger, STATUS_TEXT } from './status-badge';
 
 interface RepChecksProps {
   results: readonly CheckResult[];
@@ -14,11 +14,11 @@ export function RepChecks({ results, labels, onShowFrame }: RepChecksProps) {
   if (results.length === 0) return null;
   return (
     <ul className="check-list">
-      {results.map((result) => {
+      {results.map((result, index) => {
         const status = STATUS_TEXT[result.status];
         const content = (
           <>
-            <span className="check__badge" aria-hidden="true">
+            <span className="check__badge" aria-hidden="true" style={badgeStagger(index)}>
               {status.icon}
             </span>
             <span>

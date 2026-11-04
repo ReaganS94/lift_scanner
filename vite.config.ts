@@ -30,8 +30,8 @@ export default defineConfig(({ command, isPreview }) => ({
         short_name: 'Lift Scanner',
         description:
           'Review squat, deadlift and bench press form from a phone video, entirely on device.',
-        theme_color: '#111827',
-        background_color: '#0b1120',
+        theme_color: '#0a0b0d',
+        background_color: '#0a0b0d',
         display: 'standalone',
         icons: [
           { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
@@ -43,7 +43,7 @@ export default defineConfig(({ command, isPreview }) => ({
       workbox: {
         // The app and the MediaPipe runtime (about 15 MB) are stored when the app is first
         // opened, and replaced whenever a deploy changes them.
-        globPatterns: ['**/*.{js,css,html}', POSE_RUNTIME],
+        globPatterns: ['**/*.{js,css,html,woff2}', POSE_RUNTIME],
         globIgnores: ['mediapipe/wasm/vision_wasm_module_internal.*'],
         maximumFileSizeToCacheInBytes: 20 * 1024 * 1024,
         runtimeCaching: [

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { PreparedClip } from '../../../analysis';
 import type { PoseSequence } from '../../../core';
 import { liftRegistry } from '../../../lifts';
@@ -6,6 +6,7 @@ import { summarize, summarizeByCheck, type ReportSummary, type SetReport } from 
 import { downloadJson } from '../../download';
 import { viewLabel } from '../../flow/analysis-flow';
 import { repAtFrame } from '../../playback/frames';
+import { buzz } from '../../platform/haptics';
 import { usePlayback } from '../../playback/use-playback';
 import { CheckSummaryList } from './CheckSummaryList';
 import { PlaybackControls } from './PlaybackControls';
@@ -67,6 +68,12 @@ export function SetResults({
     report,
     shownChecks.map((check) => check.id),
   );
+  // A buzz when the results arrive: a double one if anything failed.
+  const hasFails = summary.fail > 0;
+  useEffect(() => {
+    buzz(hasFails ? [40, 80, 40] : 30);
+  }, [hasFails]);
+
   const playingRep = playback.playing ? repAtFrame(reps, playback.frame) : undefined;
 
   const showResult = (repIndex: number, frameIndex: number | undefined) => {

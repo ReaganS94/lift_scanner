@@ -1,0 +1,137 @@
+/*
+ * The app's look: dark, with one electric accent and a heavy condensed face for headings and
+ * numbers. Every colour comes from these tokens; components never use raw colours.
+ */
+:root {
+  color-scheme: dark;
+  --bg: #0a0b0d;
+  --surface: #16181c;
+  --surface-2: #20232a;
+  --border: #2c3038;
+  --fg: #f4f4f5;
+  --muted: #9a9ca5;
+  --accent: #c8f031;
+  --accent-fg: #0a0b0d;
+  --accent-glow: rgb(200 240 49 / 0.25);
+  --pass: #34d399;
+  --warn: #fbbf24;
+  --fail: #fb4d6d;
+  --radius: 0.875rem;
+  --font-display: 'Barlow Condensed', 'Arial Narrow', system-ui, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  line-height: 1.5;
+  accent-color: var(--accent);
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(120% 60% at 50% -10%, rgb(200 240 49 / 0.08), transparent 60%), var(--bg);
+  background-attachment: fixed;
+  color: var(--fg);
+}
+
+.app {
+  max-width: 40rem;
+  margin: 0 auto;
+  /* Clear of the notch and home bar when installed as an app (viewport-fit=cover). */
+  padding: calc(1rem + env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+    calc(1rem + env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+}
+
+/* Headings and big numbers use the display face, in capitals. */
+h1,
+h2,
+h3,
+.display {
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  line-height: 1.05;
+  margin: 0;
+}
+
+h1 {
+  font-size: 2rem;
+  margin-bottom: 1.25rem;
+}
+
+/* The second word of the app name in the accent colour. */
+h1 .accent {
+  color: var(--accent);
+}
+
+h2 {
+  font-size: 1.75rem;
+}
+
+h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.verdict {
+  font-weight: 600;
+}
+
+button {
+  font: inherit;
+  padding: 0.6rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--fg);
+  cursor: pointer;
+  transition:
+    transform 0.12s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.2rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  box-shadow: 0 0 24px var(--accent-glow);
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+button.link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
