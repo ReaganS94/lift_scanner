@@ -33,6 +33,9 @@ export class VideoFrameSource implements FrameSource<HTMLVideoElement> {
    */
   static async open(src: string): Promise<VideoFrameSource> {
     const video = document.createElement('video');
+    // Muted as an attribute and a property, before the source is set, so iOS never treats it
+    // as a sound that should pause music in other apps.
+    video.defaultMuted = true;
     video.muted = true;
     video.playsInline = true; // iOS would otherwise insist on fullscreen
     video.preload = 'auto';
