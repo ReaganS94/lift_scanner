@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Audio test: session info</title>
+    <style>
+      body {
+        font:
+          18px/1.5 system-ui,
+          sans-serif;
+        margin: 2rem;
+        background: #0a0b0d;
+        color: #f4f4f5;
+      }
+      code {
+        color: #c8f031;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Audio session test</h1>
+    <p>
+      This page only sets the audio session to <code>ambient</code>, as the app does, and shows what
+      the browser reports.
+    </p>
+    <p id="out">Checking…</p>
+    <script>
+      // Reports whether WebKit's Audio Session API exists here and what it ends up as.
+      const out = document.getElementById('out');
+      const session = navigator.audioSession;
+      if (!session) {
+        out.textContent = 'navigator.audioSession: not available in this browser.';
+      } else {
+        const before = session.type;
+        try {
+          session.type = 'ambient';
+        } catch (error) {
+          out.textContent = 'Setting the type failed: ' + error;
+        }
+        out.textContent =
+          'navigator.audioSession.type was "' +
+          before +
+          '", now "' +
+          session.type +
+          '". State: ' +
+          (session.state ?? 'unknown') +
+          '.';
+      }
+    </script>
+  </body>
+</html>

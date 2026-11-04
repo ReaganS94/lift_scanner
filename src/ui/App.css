@@ -739,3 +739,8 @@ progress::-moz-progress-bar {
 .live-skeleton[data-found='false'] .live-skeleton__lost {
   display: block;
 }
+
+.version {
+  font-size: 0.75rem;
+  text-align: center;
+}
