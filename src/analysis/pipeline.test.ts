@@ -97,6 +97,15 @@ describe('pipeline', () => {
     }
   });
 
+  it('hands each pose to onFrame as soon as it is found', async () => {
+    const seen: number[] = [];
+    const raw = await extractPoses(fakeVideo(squatSet(1)), fakeEstimator, {
+      sampleFps: FPS,
+      onFrame: (pose) => seen.push(pose.timeMs),
+    });
+    expect(seen).toEqual(raw.frames.map((frame) => frame.timeMs));
+  });
+
   it('guesses a side view when the far side is only faintly visible, as in real clips', () => {
     const faintFarSide = squatSet(1).map((figure) => {
       const copy = [...figure];

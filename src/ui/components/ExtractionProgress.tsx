@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react';
+import type { LivePoseBox } from '../flow/live-pose';
 import { useWakeLock } from '../platform/use-wake-lock';
+import { LiveSkeleton } from './LiveSkeleton';
 import { estimateRemainingSeconds, formatDuration } from './progress-time';
 
 interface ExtractionProgressProps {
   progress: number;
+  /** The latest pose found, drawn live so you can see tracking working. */
+  livePose: LivePoseBox;
   onCancel: () => void;
 }
 
@@ -11,7 +15,7 @@ interface ExtractionProgressProps {
  * Shown while the pose model works through the video. Keeps the screen on, and shows how long
  * it has taken and roughly how long is left.
  */
-export function ExtractionProgress({ progress, onCancel }: ExtractionProgressProps) {
+export function ExtractionProgress({ progress, livePose, onCancel }: ExtractionProgressProps) {
   useWakeLock(true);
   const percent = Math.round(progress * 100);
   const [startedAt] = useState(() => Date.now());
@@ -35,6 +39,7 @@ export function ExtractionProgress({ progress, onCancel }: ExtractionProgressPro
   return (
     <div className="stack">
       <p>{percent === 0 ? 'Loading the pose model…' : `Tracking your movement… ${percent}%`}</p>
+      <LiveSkeleton livePose={livePose} />
       <progress max={100} value={percent} aria-label="Analysis progress" />
       <p className="muted progress-times">
         <span>{formatDuration((now - startedAt) / 1000)} so far</span>

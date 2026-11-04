@@ -5,6 +5,7 @@ import { liftRegistry } from '../../lifts';
 import { abortable } from './abortable';
 import type { AnalysisAdapters, DisposableFrameSource } from './adapters';
 import { flowReducer, INITIAL_FLOW } from './analysis-flow';
+import type { LivePoseBox } from './live-pose';
 
 /** Frames analysed per second of video. Enough to catch every phase of a rep. */
 const SAMPLE_FPS = 30;
@@ -19,6 +20,8 @@ export function useAnalysisFlow<TImage>(adapters: AnalysisAdapters<TImage>) {
   // The object URL for the current clip, used for analysis and playback. Released when the
   // user moves on to another clip.
   const videoUrl = useRef<string | null>(null);
+  // The latest pose while tracking, for the processing screen to draw.
+  const livePose = useRef<LivePoseBox['current']>(null);
 
   const releaseVideo = useCallback(() => {
     if (videoUrl.current) URL.revokeObjectURL(videoUrl.current);
@@ -45,6 +48,7 @@ export function useAnalysisFlow<TImage>(adapters: AnalysisAdapters<TImage>) {
       releaseVideo();
       const url = URL.createObjectURL(file);
       videoUrl.current = url;
+      livePose.current = null;
       dispatch({ type: 'start', liftId, videoUrl: url });
 
       const opening = adapters.openVideo(url);
@@ -58,6 +62,9 @@ export function useAnalysisFlow<TImage>(adapters: AnalysisAdapters<TImage>) {
           sampleFps: SAMPLE_FPS,
           onProgress: (progress) => {
             if (isCurrent()) dispatch({ type: 'progress', progress });
+          },
+          onFrame: (pose, aspectRatio) => {
+            if (isCurrent()) livePose.current = { pose, aspectRatio };
           },
           isCancelled: () => signal.aborted,
         });
@@ -121,7 +128,7 @@ export function useAnalysisFlow<TImage>(adapters: AnalysisAdapters<TImage>) {
     dispatch({ type: 'reset' });
   }, [releaseVideo]);
 
-  return { state, start, cancel, confirmView, changeView, reset };
+  return { state, livePose, start, cancel, confirmView, changeView, reset };
 }
 
 function messageOf(error: unknown): string {
