@@ -1,4 +1,5 @@
-import type { CheckResult, CheckStatus } from '../../core';
+import type { CheckResult } from '../../../core';
+import { STATUS_TEXT } from './status-badge';
 
 interface RepChecksProps {
   results: readonly CheckResult[];
@@ -7,13 +8,6 @@ interface RepChecksProps {
   /** Jumps the video to a frame of the clip, to show where a result was measured. */
   onShowFrame: (frameIndex: number) => void;
 }
-
-const STATUS_TEXT: Record<CheckStatus, { icon: string; label: string }> = {
-  pass: { icon: '✓', label: 'Pass' },
-  warn: { icon: '!', label: 'Warning' },
-  fail: { icon: '✕', label: 'Fail' },
-  skipped: { icon: '–', label: 'Not measured' },
-};
 
 /** The form check results for one rep. Each measured result links to its moment in the video. */
 export function RepChecks({ results, labels, onShowFrame }: RepChecksProps) {

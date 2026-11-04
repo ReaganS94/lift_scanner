@@ -1,8 +1,12 @@
-import type { Rep } from '../../core';
+import type { Rep } from '../../../core';
 
 interface RepSignalChartProps {
   signal: readonly (number | null)[];
   reps: readonly Rep[];
+  /** The frame the video is showing, drawn as a playhead. */
+  currentFrame: number;
+  /** The rep to highlight, if any. */
+  activeRepIndex: number | null;
   onSelectRep: (rep: Rep) => void;
 }
 
@@ -11,9 +15,15 @@ const HEIGHT = 80;
 
 /**
  * The rep signal over the whole set, with each detected rep shaded and a caption saying what the
- * chart shows. Tap a rep to jump to it.
+ * chart shows. A line follows the video, and the selected rep is highlighted. Tap a rep to play it.
  */
-export function RepSignalChart({ signal, reps, onSelectRep }: RepSignalChartProps) {
+export function RepSignalChart({
+  signal,
+  reps,
+  currentFrame,
+  activeRepIndex,
+  onSelectRep,
+}: RepSignalChartProps) {
   const peak = Math.max(0.01, ...signal.map((value) => value ?? 0));
   const x = (frame: number) => (frame / Math.max(1, signal.length - 1)) * WIDTH;
   const y = (value: number) => HEIGHT - (value / peak) * (HEIGHT - 4) - 2;
@@ -41,7 +51,7 @@ export function RepSignalChart({ signal, reps, onSelectRep }: RepSignalChartProp
         {reps.map((rep) => (
           <rect
             key={rep.index}
-            className="rep-chart__rep"
+            className={`rep-chart__rep${rep.index === activeRepIndex ? ' rep-chart__rep--active' : ''}`}
             x={x(rep.startFrame)}
             y={0}
             width={x(rep.endFrame) - x(rep.startFrame)}
@@ -54,6 +64,13 @@ export function RepSignalChart({ signal, reps, onSelectRep }: RepSignalChartProp
           </rect>
         ))}
         <path className="rep-chart__line" d={path} />
+        <line
+          className="rep-chart__playhead"
+          x1={x(currentFrame)}
+          x2={x(currentFrame)}
+          y1={0}
+          y2={HEIGHT}
+        />
       </svg>
       <figcaption className="muted">
         Your movement over the clip: the line rises as you move away from your rest position. Shaded

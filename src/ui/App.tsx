@@ -2,7 +2,7 @@ import './App.css';
 import { ChooseClip } from './components/ChooseClip';
 import { ConfirmView } from './components/ConfirmView';
 import { ExtractionProgress } from './components/ExtractionProgress';
-import { SetResults } from './components/SetResults';
+import { SetResults } from './components/results/SetResults';
 import type { AnalysisAdapters } from './flow/adapters';
 import { useAnalysisFlow } from './flow/use-analysis-flow';
 
