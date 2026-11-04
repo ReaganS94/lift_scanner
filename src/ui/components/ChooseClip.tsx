@@ -1,27 +1,37 @@
-import { useState, type SubmitEvent } from 'react';
+import { useState, type ChangeEvent, type SubmitEvent } from 'react';
 import { liftRegistry } from '../../lifts';
+import { loadLastLift, saveLastLift } from '../preferences/last-lift';
 
 interface ChooseClipProps {
   onStart: (liftId: string, file: File) => void;
 }
 
-/** First screen: pick the lift and the video of the set. */
+/** First screen: pick the lift, then record the set or choose a video of it. */
 export function ChooseClip({ onStart }: ChooseClipProps) {
   const lifts = liftRegistry.all();
-  const [liftId, setLiftId] = useState(lifts[0]?.id ?? '');
+  const [liftId, setLiftId] = useState(() => {
+    const last = loadLastLift();
+    return last && lifts.some((lift) => lift.id === last) ? last : (lifts[0]?.id ?? '');
+  });
   const [file, setFile] = useState<File | null>(null);
 
   const submit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (file && liftId) onStart(liftId, file);
+    if (!file || !liftId) return;
+    saveLastLift(liftId);
+    onStart(liftId, file);
+  };
+
+  const pickFile = (event: ChangeEvent<HTMLInputElement>) => {
+    setFile(event.target.files?.[0] ?? null);
   };
 
   return (
     <form className="stack" onSubmit={submit}>
-      <fieldset className="choice-group">
+      <fieldset className="lift-options">
         <legend>Which lift?</legend>
         {lifts.map((lift) => (
-          <label key={lift.id} className="choice">
+          <label key={lift.id} className="lift-option">
             <input
               type="radio"
               name="lift"
@@ -31,21 +41,31 @@ export function ChooseClip({ onStart }: ChooseClipProps) {
                 setLiftId(lift.id);
               }}
             />
-            {lift.name}
+            <span>{lift.name}</span>
           </label>
         ))}
       </fieldset>
 
-      <label className="file-picker">
-        <span>Video of your set</span>
-        <input
-          type="file"
-          accept="video/*"
-          onChange={(event) => {
-            setFile(event.target.files?.[0] ?? null);
-          }}
-        />
-      </label>
+      <div className="stack stack--tight">
+        <span className="field-label">Video of your set</span>
+        <div className="file-buttons">
+          {/* On a phone, `capture` opens the camera straight away; elsewhere it's a file picker. */}
+          <label className="file-button">
+            <input type="file" accept="video/*" capture="environment" onChange={pickFile} />
+            Record set
+          </label>
+          <label className="file-button">
+            <input type="file" accept="video/*" onChange={pickFile} />
+            Choose video
+          </label>
+        </div>
+        {file && (
+          <p className="chosen-file">
+            <span aria-hidden="true">✓ </span>
+            {file.name}
+          </p>
+        )}
+      </div>
 
       <details className="tips">
         <summary>Filming tips</summary>

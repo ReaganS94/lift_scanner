@@ -15,3 +15,4 @@ export type { FrameSource, PoseEstimator, SampledFrame } from './ports';
 export type { Rep, RepDetectionOptions } from './rep';
 export { VIEWS } from './view';
 export type { View } from './view';
+export { SEEK_NUDGE_SECONDS } from './video-timing';

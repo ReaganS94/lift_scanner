@@ -1,4 +1,4 @@
-import type { FrameSource, SampledFrame } from '../../core';
+import { SEEK_NUDGE_SECONDS, type FrameSource, type SampledFrame } from '../../core';
 
 /** Loading a picked file is local, so this only trips if the browser can't decode it. */
 const LOAD_TIMEOUT_MS = 15_000;
@@ -11,12 +11,6 @@ const FRAME_SHOWN_TIMEOUT_MS = 500;
  * one, so a single slow frame on a busy phone doesn't turn the check off.
  */
 const MAX_FRAME_SHOWN_MISSES = 3;
-/**
- * Sample times are nudged just past each frame boundary: seeking to exactly 1/30 s on a 30 fps
- * video can land on either neighbouring frame because of rounding.
- */
-const SEEK_NUDGE_SECONDS = 0.001;
-
 const UNREADABLE = "This video couldn't be read. Try an MP4 or MOV recorded on your phone.";
 
 /**

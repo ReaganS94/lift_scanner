@@ -38,7 +38,9 @@ body {
 .app {
   max-width: 40rem;
   margin: 0 auto;
-  padding: 1rem 1rem 3rem;
+  /* Clear of the notch and home bar when installed as an app (viewport-fit=cover). */
+  padding: calc(1rem + env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+    calc(1rem + env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
 }
 
 h1 {
@@ -73,12 +75,6 @@ h3 {
 
 .verdict {
   font-weight: 600;
-}
-
-.row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
 }
 
 .muted {
@@ -135,25 +131,85 @@ button.link {
   text-decoration: underline;
 }
 
-.choice-group {
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  display: flex;
-  flex-direction: column;
+.lift-options {
+  border: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
   gap: 0.5rem;
 }
 
-.choice {
+.lift-options legend,
+.field-label {
+  font-weight: 600;
+  padding: 0;
+  margin-bottom: 0.5rem;
+}
+
+.lift-option {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  min-height: 2rem;
+  min-height: 3.5rem;
+  padding: 0 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  font-size: 1.1rem;
+  cursor: pointer;
 }
 
-.file-picker {
+/* The radio stays in the page for keyboards and screen readers; the card shows the choice. */
+.lift-option input,
+.file-button input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.lift-option:has(input:checked) {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  font-weight: 600;
+}
+
+.lift-option:has(input:focus-visible),
+.file-button:has(input:focus-visible) {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.file-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.file-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 3.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chosen-file {
+  margin: 0;
+  color: var(--pass);
+  overflow-wrap: anywhere;
+}
+
+.progress-times {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  justify-content: space-between;
+  gap: 1rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .tips ul {
@@ -420,4 +476,64 @@ progress {
 
 .rep-grid .check__badge {
   transform: none;
+}
+
+/* Pinned to the bottom of the screen on the results, clear of the home bar. */
+.action-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin: 0 -1rem calc(-1rem - env(safe-area-inset-bottom));
+  padding: 0.5rem 1rem calc(0.5rem + env(safe-area-inset-bottom));
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 0.5rem;
+}
+
+.action-bar > .primary {
+  flex: 1;
+  min-height: 2.75rem;
+}
+
+.menu {
+  position: relative;
+}
+
+.menu summary {
+  list-style: none;
+  display: grid;
+  place-items: center;
+  min-width: 2.75rem;
+  height: 100%;
+  min-height: 2.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--surface);
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+
+.menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.menu__items {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 0.5rem);
+  display: flex;
+  flex-direction: column;
+  min-width: 12rem;
+  padding: 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--bg);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.2);
+}
+
+.menu__items button {
+  border: none;
+  background: none;
+  text-align: left;
 }

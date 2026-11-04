@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
-import { frameAtTime, stepFrame, timeOfFrame, type FrameRange } from './frames';
+import { frameAtTime, seekTimeOfFrame, stepFrame, timeOfFrame, type FrameRange } from './frames';
 
 /** The slow-motion speeds offered, plus normal speed. */
 export const PLAYBACK_RATES = [0.25, 0.5, 1] as const;
@@ -53,7 +53,7 @@ export function usePlayback(
     const read = () => {
       const range = loopRef.current;
       if (range && !video.paused && video.currentTime > timeOfFrame(range.endFrame, sampleFps)) {
-        video.currentTime = timeOfFrame(range.startFrame, sampleFps);
+        video.currentTime = seekTimeOfFrame(range.startFrame, sampleFps);
       }
       setFrame(frameAtTime(video.currentTime, sampleFps));
     };
@@ -75,7 +75,7 @@ export function usePlayback(
     const onEnded = () => {
       const range = loopRef.current;
       if (!range) return;
-      video.currentTime = timeOfFrame(range.startFrame, sampleFps);
+      video.currentTime = seekTimeOfFrame(range.startFrame, sampleFps);
       void video.play();
     };
 
@@ -97,7 +97,7 @@ export function usePlayback(
       const video = videoRef.current;
       if (!video) return;
       video.pause();
-      video.currentTime = timeOfFrame(stepFrame(target, 0, frameCount), sampleFps);
+      video.currentTime = seekTimeOfFrame(stepFrame(target, 0, frameCount), sampleFps);
     },
     [videoRef, sampleFps, frameCount],
   );
@@ -115,7 +115,7 @@ export function usePlayback(
     (range: FrameRange) => {
       const video = videoRef.current;
       if (!video) return;
-      video.currentTime = timeOfFrame(range.startFrame, sampleFps);
+      video.currentTime = seekTimeOfFrame(range.startFrame, sampleFps);
       void video.play();
     },
     [videoRef, sampleFps],
