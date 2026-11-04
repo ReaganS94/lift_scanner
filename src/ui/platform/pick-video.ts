@@ -1,22 +1,21 @@
-/**
- * Opens the phone's camera to record a video, and resolves with the recording, or null if the
- * user backs out.
- *
- * The file input is made only when asked for, never left in the page. On iOS home-screen apps,
- * a file input with `capture` sitting in the page turns the camera on as soon as the app opens
- * (the green dot), which also pauses music playing in other apps.
- */
-
 /** Closes out the previous request, if its input is still around (e.g. `cancel` never fired). */
 let abandonPrevious: (() => void) | null = null;
 
-export function recordVideo(): Promise<File | null> {
+/**
+ * Asks for a video and resolves with it, or null if the user backs out. `camera` opens the
+ * phone's camera to record one; `library` offers the photo library and files.
+ *
+ * The file input is made only when asked for, never left in the page. On iOS home-screen apps,
+ * a video file input sitting in the page can turn the camera on as soon as the app opens (the
+ * green dot), which also pauses music playing in other apps.
+ */
+export function pickVideo(source: 'camera' | 'library'): Promise<File | null> {
   abandonPrevious?.();
   return new Promise((resolve) => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'video/*';
-    input.setAttribute('capture', 'environment');
+    if (source === 'camera') input.setAttribute('capture', 'environment');
     input.hidden = true;
 
     const finish = (file: File | null) => {

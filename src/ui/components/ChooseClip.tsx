@@ -1,6 +1,6 @@
-import { useState, type ChangeEvent, type SubmitEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { liftRegistry } from '../../lifts';
-import { recordVideo } from '../platform/pick-video';
+import { pickVideo } from '../platform/pick-video';
 import { loadLastLift, saveLastLift } from '../preferences/last-lift';
 import { APP_VERSION } from '../version';
 
@@ -24,8 +24,10 @@ export function ChooseClip({ onStart }: ChooseClipProps) {
     onStart(liftId, file);
   };
 
-  const pickFile = (event: ChangeEvent<HTMLInputElement>) => {
-    setFile(event.target.files?.[0] ?? null);
+  const pick = (source: 'camera' | 'library') => {
+    void pickVideo(source).then((picked) => {
+      if (picked) setFile(picked);
+    });
   };
 
   return (
@@ -51,23 +53,26 @@ export function ChooseClip({ onStart }: ChooseClipProps) {
       <div className="stack stack--tight">
         <span className="field-label">Video of your set</span>
         <div className="file-buttons">
-          {/* Opens the camera on a phone, a file picker elsewhere. See recordVideo for why the
-              input is only made on tap. */}
+          {/* Record set opens the camera on a phone, a file picker elsewhere. See pickVideo for
+              why neither keeps a file input in the page. */}
           <button
             type="button"
             className="file-button"
             onClick={() => {
-              void recordVideo().then((recorded) => {
-                if (recorded) setFile(recorded);
-              });
+              pick('camera');
             }}
           >
             Record set
           </button>
-          <label className="file-button">
-            <input type="file" accept="video/*" onChange={pickFile} />
+          <button
+            type="button"
+            className="file-button"
+            onClick={() => {
+              pick('library');
+            }}
+          >
             Choose video
-          </label>
+          </button>
         </div>
         <p className="muted hint">
           Videos recorded here may not be saved to your photos. To keep one, film with the camera
