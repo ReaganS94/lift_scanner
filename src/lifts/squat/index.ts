@@ -1,4 +1,7 @@
 import type { LiftDefinition } from '../../core';
+import { depth } from './checks/depth';
+import { kneesCaving } from './checks/knees-caving';
+import { torsoAngle } from './checks/torso-angle';
 import { squatRepSignal } from './rep-signal';
 
 export const squat: LiftDefinition = {
@@ -11,5 +14,5 @@ export const squat: LiftDefinition = {
     minAmplitude: 0.3,
     minDurationSeconds: 0.8,
   },
-  checks: [],
+  checks: [depth, torsoAngle, kneesCaving],
 };

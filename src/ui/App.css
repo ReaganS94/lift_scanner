@@ -7,6 +7,9 @@
   --accent: #0284c7;
   --accent-fg: #ffffff;
   --surface: #f3f4f6;
+  --pass: #15803d;
+  --warn: #b45309;
+  --fail: #b91c1c;
   font-family: system-ui, sans-serif;
   line-height: 1.5;
 }
@@ -20,6 +23,9 @@
     --accent: #38bdf8;
     --accent-fg: #0b1120;
     --surface: #1f2937;
+    --pass: #4ade80;
+    --warn: #fbbf24;
+    --fail: #f87171;
   }
 }
 
@@ -190,4 +196,76 @@ progress {
   display: flex;
   justify-content: space-between;
   text-align: left;
+}
+
+.rep-card {
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.rep-list .rep-card__header {
+  border: none;
+  border-radius: 0;
+}
+
+.check-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0;
+}
+
+.check__body {
+  display: flex;
+  gap: 0.6rem;
+  align-items: baseline;
+  width: 100%;
+  padding: 0.4rem 1rem;
+  text-align: left;
+}
+
+.rep-list button.check__body {
+  border: none;
+  border-radius: 0;
+  background: none;
+  justify-content: flex-start;
+}
+
+.check__badge {
+  flex: none;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--bg);
+  background: var(--muted);
+  transform: translateY(0.2rem);
+}
+
+.check--pass .check__badge {
+  background: var(--pass);
+}
+
+.check--warn .check__badge {
+  background: var(--warn);
+}
+
+.check--fail .check__badge {
+  background: var(--fail);
+}
+
+.check--skipped {
+  color: var(--muted);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

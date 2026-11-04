@@ -79,20 +79,21 @@ src/
     registry.ts
     squat/
       index.ts         The lift definition (views, rep signal, checks).
-      checks/
+      rep-signal.ts
+      bottom.ts        Finds the bottom of a rep, shared by the side-view checks.
+      checks/          One file per check, each with its own test.
         depth.ts
         torso-angle.ts
-        knee-valgus.ts
-      squat.test.ts
+        knees-caving.ts
     deadlift/
     bench/
   analysis/      The pipeline that wires the steps together.
   report/        The report model and its serialisation.
   adapters/      Code that talks to the outside world, behind interfaces
     pose/          from core/. Swappable and mockable.
-      mediapipe.ts
+      mediapipe-pose-estimator.ts
     video/
-      html-video.ts
+      video-frame-source.ts
     storage/
       indexeddb.ts
   ui/            React screens and components. The only layer that renders.
@@ -318,6 +319,30 @@ are trusted.
 | Bench    | Full lockout                           | Side         |
 | Bench    | Uneven press (one arm lagging)         | Front / back |
 | All      | Rep tempo (time down and up)           | Any          |
+
+### Squat checks
+
+Built. Depth and torso angle need a side view and measure the near side of the
+body at the bottom of the rep: the frame within 0.25 s of where the hips were
+lowest that has the thigh furthest below parallel. Knees caving in needs a
+front or back view and looks at every frame of the rep. These thresholds are
+starting points, to be tuned on real clips.
+
+| Check           | Measures                                                              | Pass                 | Warn            | Fail                |
+| --------------- | --------------------------------------------------------------------- | -------------------- | --------------- | ------------------- |
+| Depth           | Thigh angle, hip joint vs knee joint                                  | At parallel or below | Up to 10° above | More than 10° above |
+| Torso angle     | Hip-to-shoulder lean from vertical                                    | Up to 55°            | 55° to 65°      | Over 65°            |
+| Knees caving in | Knee gap as a share of ankle gap, vs standing at the start of the rep | Narrows by up to 10% | 10% to 20%      | Over 20%            |
+
+- **Depth** uses joint centres, because the model doesn't find the hip crease or
+  the top of the knee. Hip joint level with the knee joint is a little shallower
+  than the competition rule (hip crease below the top of the knee), so a rep
+  that only just passes here might not pass in a meet.
+- **Torso angle** is loose on purpose. A low-bar squat leans more than a
+  high-bar one, and the app doesn't know which you do.
+- **Knees caving in** compares each rep with its own start, so a wide or narrow
+  stance doesn't matter. It skips reps with the feet close together, where small
+  knee movements look large.
 
 ## Testing
 
