@@ -13,7 +13,7 @@ const PURE = '^src/(core|geometry|signal|view|reps|lifts|analysis|report|testing
 const LAYERS = {
   core: [],
   geometry: ['signal'],
-  signal: ['geometry'],
+  signal: [],
   view: ['geometry', 'signal'],
   reps: ['geometry', 'signal'],
   lifts: ['geometry', 'signal'],

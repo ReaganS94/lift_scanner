@@ -111,7 +111,7 @@ Arrows point from a module to what it may import. Every layer may also import
 `core`.
 
 ```
-ui ──▶ analysis ──▶ view, reps, lifts ──▶ geometry ◀──▶ signal ──▶ core
+ui ──▶ analysis ──▶ view, reps, lifts ──▶ geometry ──▶ signal ──▶ core
  │         └──────▶ report ─────────────────────────────────────────▲
  └──▶ adapters ─────────────────────────────────────────────────────┘
 ```
@@ -120,7 +120,7 @@ ui ──▶ analysis ──▶ view, reps, lifts ──▶ geometry ◀──�
 | ---------------------- | ------------------------------------------------------- |
 | `core`                 | nothing                                                 |
 | `geometry`             | `signal`                                                |
-| `signal`               | `geometry`                                              |
+| `signal`               | nothing                                                 |
 | `view`                 | `geometry`, `signal`                                    |
 | `reps`                 | `geometry`, `signal`                                    |
 | `lifts`                | `geometry`, `signal` (and never another lift's folder)  |
@@ -244,6 +244,18 @@ between reps: standing for a squat, arms locked out for a bench press, bar on th
 floor for a deadlift. So every lift's signal sits near 0 at rest and peaks once
 per rep, whether the lift starts at the top (squat, bench) or the bottom
 (deadlift), and one generic rep detector in `reps/` works for all of them.
+
+| Lift     | Rep signal                               | Rest position |
+| -------- | ---------------------------------------- | ------------- |
+| Squat    | Hip drop below standing                  | Standing      |
+| Deadlift | Hand (bar) rise above the floor position | Bar on floor  |
+| Bench    | Hand (bar) drop below lockout            | Lockout       |
+
+The detector uses two thresholds (hysteresis): a rep starts when the signal
+climbs past half its typical peak and ends when it falls back below a fifth of it,
+so jitter near one threshold can't split a rep. A rep only counts if the lifter is
+seen at rest both before and after it, so a clip that starts or ends mid-rep
+doesn't produce a half rep. Each lift sets a minimum movement and duration.
 
 ## Adding a new lift
 

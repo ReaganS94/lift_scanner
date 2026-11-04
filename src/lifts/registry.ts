@@ -1,4 +1,7 @@
 import type { LiftDefinition } from '../core';
+import { bench } from './bench';
+import { deadlift } from './deadlift';
+import { squat } from './squat';
 
 /** Looks up the lifts the app supports. Add a lift by passing its definition to the registry. */
 export interface LiftRegistry {
@@ -21,5 +24,5 @@ export function createLiftRegistry(lifts: readonly LiftDefinition[]): LiftRegist
   };
 }
 
-/** The lifts available in the app. Squat, deadlift and bench are added here as they're built. */
-export const liftRegistry: LiftRegistry = createLiftRegistry([]);
+/** The lifts available in the app, in the order they're offered. Register new lifts here. */
+export const liftRegistry: LiftRegistry = createLiftRegistry([squat, deadlift, bench]);
