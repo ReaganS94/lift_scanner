@@ -503,6 +503,7 @@ with the hands lowest at the turn.
 | Import rules       | dependency-cruiser                                                    | Free |
 | Local history      | IndexedDB, via a small wrapper                                        | Free |
 | CI and hosting     | GitHub Actions and GitHub Pages                                       | Free |
+| Installable app    | vite-plugin-pwa (web manifest and Workbox service worker)             | Free |
 
 CI runs type checking, lint, the import rules and tests on every pull request. On
 `main`, it deploys to GitHub Pages only after those checks pass.
@@ -541,7 +542,38 @@ CI runs type checking, lint, the import rules and tests on every pull request. O
   `public/mediapipe/` by `scripts/copy-mediapipe-wasm.mjs` after every install,
   so the app serves it itself at exactly the installed version. The model file
   (about 9 MB, pinned version) is downloaded from Google's model storage on first
-  use and then cached by the browser. No video data is sent anywhere.
+  use and then kept by the service worker (see Installing on a phone). No video
+  data is sent anywhere.
+
+## Installing on a phone
+
+The app is a progressive web app (PWA): it can be added to the phone's home
+screen and opens full screen like an installed app, with no app store.
+`vite-plugin-pwa` writes the web manifest and a service worker at build time; the
+settings are in `vite.config.ts`.
+
+- **What's kept on the phone.** When the app is first opened, the service worker
+  stores the app itself and MediaPipe's runtime (about 15 MB). The pose model
+  (about 9 MB) is stored the first time a clip is analysed. After that the app
+  works with no connection, which helps in a gym with poor signal. Only the
+  runtime build the pose estimator loads is stored, not the ES-module copy.
+- **Updates.** Each deploy changes the stored files' revisions. The phone fetches
+  the new version in the background, checking when the app opens or comes back
+  into view, and `ui/components/UpdateNotice` offers a reload. It never reloads by
+  itself, because that would lose an analysis in progress. "Later" hides the
+  notice until the app is next opened.
+- **The model's URL names its version**, so the stored copy is used without
+  checking for a newer one. A new model means a new URL, which is downloaded
+  afresh.
+- **Not in development.** Only `pnpm build` makes the service worker, so
+  `pnpm dev` never serves stale files. Try it with `pnpm build && pnpm preview`.
+- **iPhone**: Safari has no install prompt; Share → Add to Home Screen installs
+  it, with the icon from `apple-touch-icon.png`. Chrome on Android offers to
+  install it.
+- **Icons** are drawn in `public/icons/icon.svg`. It's full-bleed, with
+  everything inside the central safe zone, so the same image works as a maskable
+  icon. The PNGs are rendered from it at 180, 192 and 512 px; render them again
+  if the SVG changes.
 
 ## Known limits
 
@@ -565,3 +597,8 @@ CI runs type checking, lint, the import rules and tests on every pull request. O
 - **Camera view: guess and confirm.** The user always picks the lift. The app
   guesses the view (side or front/back) from body proportions, shows the guess,
   and the user confirms or corrects it before checks run.
+- **On the phone: a PWA.** It's free, works with GitHub Pages hosting, and
+  installs from the browser on iPhone and Android. A native wrapper such as
+  Capacitor would need a paid Apple developer account to install on an iPhone,
+  and adds nothing this app needs: it only reads video files, which the browser
+  already allows.

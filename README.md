@@ -18,6 +18,18 @@ it before adding code.
 3. Confirm the camera view the app detected.
 4. Get a rep-by-rep report, with each issue linked to the moment in the video.
 
+## Install on your phone
+
+Open <https://reagans94.github.io/lift_scanner/> on the phone, then:
+
+- **iPhone**: in Safari, tap Share, then **Add to Home Screen**.
+- **Android**: in Chrome, open the menu and tap **Install app** (or **Add to
+  Home screen**).
+
+The first analysis needs a connection to download the pose model (about 9 MB).
+After that the app works offline. When a new version is out, it offers to
+reload.
+
 ## Development
 
 Needs Node 22 or later and pnpm (`corepack enable` sets up the right version).
