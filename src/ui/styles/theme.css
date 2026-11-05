@@ -16,6 +16,8 @@
   --pass: #34d399;
   --warn: #fbbf24;
   --fail: #fb4d6d;
+  /* The bar's plate and path on the video: apart from the skeleton and the result colours. */
+  --bar-path: #38bdf8;
   --radius: 0.875rem;
   --font-display: 'Barlow Condensed', 'Arial Narrow', system-ui, sans-serif;
   font-family:

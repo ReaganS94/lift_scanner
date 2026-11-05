@@ -1,4 +1,4 @@
-import type { FrameSource, PoseEstimator } from '../../core';
+import type { FrameSource, PoseEstimator, RegionReader } from '../../core';
 
 /** A frame source the screens can release when a clip is finished with. */
 export interface DisposableFrameSource<TImage> extends FrameSource<TImage> {
@@ -12,4 +12,6 @@ export interface DisposableFrameSource<TImage> extends FrameSource<TImage> {
 export interface AnalysisAdapters<TImage> {
   openVideo(url: string): Promise<DisposableFrameSource<TImage>>;
   createPoseEstimator(): PoseEstimator<TImage>;
+  /** For following the bar in lifts that ask for it. */
+  createRegionReader(): RegionReader<TImage>;
 }

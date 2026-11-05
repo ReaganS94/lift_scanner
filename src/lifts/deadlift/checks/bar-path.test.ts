@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LANDMARK, type LandmarkName } from '../../../core';
+import { LANDMARK, type BarPoint, type LandmarkName, type RepContext } from '../../../core';
 import { cleanPoses } from '../../../signal';
 import {
   between,
@@ -33,9 +33,10 @@ describe('deadlift bar path', () => {
     const result = barPath.evaluate(swinging(0.04));
     expect(result).toMatchObject({
       status: 'warn',
-      message: 'The bar drifted forward during the pull, by about 14% of your torso length.',
+      message: 'The bar drifted forward during the pull, by about 13% of your torso length.',
     });
-    expect(result.status !== 'skipped' && result.frameIndex).toBe(25);
+    // The middle of the furthest stretch, which the steadying median widens by a frame.
+    expect(result.status !== 'skipped' && result.frameIndex).toBe(24);
   });
 
   it('fails a bar that swings well away from the legs', () => {
@@ -66,5 +67,59 @@ describe('deadlift bar path', () => {
       return barPath.evaluate({ ...clean, sequence: cleanPoses(noisy) }).status;
     }).filter((status) => status === 'pass').length;
     expect(passes).toBeGreaterThanOrEqual(194);
+  });
+
+  describe('following the plate', () => {
+    /**
+     * A rep with the hands hidden by the plate, as from the side, and the plate followed at the
+     * hands' true position plus `edit`.
+     */
+    function withPlate(
+      context: RepContext,
+      edit: (point: BarPoint, frameIndex: number) => BarPoint | null = (point) => point,
+    ): RepContext {
+      const barTrack = context.sequence.frames.map((frame, i) => {
+        const wrist = frame.landmarks?.[LANDMARK.leftWrist];
+        return wrist ? edit({ x: wrist.x, y: wrist.y, radius: 0.11, confidence: 0.9 }, i) : null;
+      });
+      const frames = context.sequence.frames.map((frame) => ({
+        ...frame,
+        landmarks:
+          frame.landmarks?.map((landmark, i) =>
+            i === LANDMARK.leftWrist || i === LANDMARK.rightWrist
+              ? { ...landmark, visibility: 0 }
+              : landmark,
+          ) ?? null,
+      }));
+      return { ...context, sequence: { ...context.sequence, frames, barTrack } };
+    }
+
+    it('measures the bar path from the plate when the hands are hidden', () => {
+      expect(barPath.evaluate(withPlate(sideDeadliftRep()))).toMatchObject({ status: 'pass' });
+      expect(barPath.evaluate(withPlate(swinging(0.08)))).toMatchObject({ status: 'fail' });
+    });
+
+    it('trusts the plate over the hands when both are seen', () => {
+      const context = withPlate(sideDeadliftRep(), (point, i) => ({
+        ...point,
+        // The plate drifts 0.1 frame heights (0.4 torso lengths) forward after liftoff.
+        x: point.x + 0.1 * Math.min(1, Math.max(0, (i - 15) / 10)),
+      }));
+      const { barTrack = [] } = context.sequence;
+      const handsSeen = { ...context, sequence: { ...sideDeadliftRep().sequence, barTrack } };
+      expect(barPath.evaluate(handsSeen)).toMatchObject({ status: 'fail' });
+    });
+
+    it("isn't failed by one frame where the plate was placed wrongly", () => {
+      const context = withPlate(sideDeadliftRep(), (point, i) =>
+        i === 25 ? { ...point, x: point.x + 0.1 } : point,
+      );
+      expect(barPath.evaluate(context)).toMatchObject({ status: 'pass' });
+    });
+
+    it('skips when neither the plate nor the hands were followed', () => {
+      const context = withPlate(sideDeadliftRep(), () => null);
+      expect(barPath.evaluate(context)).toMatchObject({ status: 'skipped' });
+    });
   });
 });

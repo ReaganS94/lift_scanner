@@ -1,3 +1,4 @@
+import type { FrameRegion, GrayImage } from './image';
 import type { PoseFrame } from './pose';
 
 /**
@@ -27,4 +28,16 @@ export interface PoseEstimator<TImage> {
   /** Landmarks must be returned in the shared unit described on Landmark. */
   estimate(frame: SampledFrame<TImage>, aspectRatio: number): Promise<PoseFrame>;
   dispose(): void;
+}
+
+/**
+ * Reads part of a frame as a small greyscale picture, for following things the pose model
+ * doesn't see, such as the bar. Implemented in src/adapters/video/.
+ */
+export interface RegionReader<TImage> {
+  /**
+   * The part of `image` inside `region`, scaled to `pixelsPerUnit` pixels per frame height.
+   * Parts of the region outside the frame come back black.
+   */
+  read(image: TImage, region: FrameRegion, pixelsPerUnit: number): GrayImage;
 }

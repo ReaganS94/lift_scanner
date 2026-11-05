@@ -21,6 +21,11 @@ export interface LiftDefinition {
   repSignal(clip: ClipContext): (number | null)[];
   readonly repDetection: RepDetectionOptions;
   readonly checks: readonly FormCheck[];
+  /**
+   * Whether to follow the bar's end (the near plate) through the clip while the poses are
+   * found. It costs a little extra time per frame, so only lifts whose checks use it ask.
+   */
+  readonly followsBar?: boolean;
   /** Filming advice for this lift, shown after the general tips. Each entry is one sentence or two. */
   readonly filmingTips?: readonly string[];
 }

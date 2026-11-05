@@ -1,5 +1,5 @@
 import type { CheckResult, FormCheck, RepContext } from '../../../core';
-import { averagePoint, WRISTS } from '../../../geometry';
+import { rollingMedian } from '../../../signal';
 import { pullOf } from '../pull';
 
 /**
@@ -10,10 +10,18 @@ import { pullOf } from '../pull';
 const PASS_UP_TO_TORSOS = 0.1;
 /** Drifting further than this is a fail; between the two is a warning. */
 const WARN_UP_TO_TORSOS = 0.2;
+/**
+ * The bar's position is steadied with a median over this many frames either side, so one frame
+ * where the plate or hands were placed wrongly can't fail a rep.
+ */
+const STEADY_RADIUS_FRAMES = 2;
 
 const ID = 'deadlift.bar-path';
 
-/** The bar drifting away from the legs during the pull, followed through the hands. */
+/**
+ * The bar drifting away from the legs during the pull, followed through the near plate where it
+ * was found, otherwise the hands.
+ */
 export const barPath: FormCheck = {
   id: ID,
   label: 'Bar path',
@@ -21,24 +29,36 @@ export const barPath: FormCheck = {
   focus: ['elbow', 'wrist'],
   evaluate(context: RepContext): CheckResult {
     const pull = pullOf(context);
-    const liftoff = pull?.frames[pull.liftoff];
-    const start = pull?.tracker === 'hands' && liftoff && averagePoint(liftoff.frame, WRISTS);
-    if (!pull || !liftoff || !start) {
+    if (!pull || pull.tracker === 'shoulders') {
       return {
         checkId: ID,
         status: 'skipped',
         message:
-          "The hands weren't seen clearly, often because the plates hide them from the side.",
+          'Neither the plate nor the hands were followed clearly. Film from straight side-on with the whole plate in view.',
+      };
+    }
+
+    const xs = rollingMedian(
+      pull.barPoints.map((point) => point?.x ?? null),
+      STEADY_RADIUS_FRAMES,
+    );
+    const start = xs[pull.liftoff];
+    const liftoff = pull.frames[pull.liftoff];
+    if (start === null || start === undefined || !liftoff) {
+      return {
+        checkId: ID,
+        status: 'skipped',
+        message: "The bar wasn't seen as it left the floor.",
       };
     }
 
     let furthest = { drift: 0, frameIndex: liftoff.index };
-    for (const { frame, index } of pull.frames.slice(pull.liftoff)) {
-      const hands = averagePoint(frame, WRISTS);
-      if (!hands) continue;
-      const drift = ((hands.x - start.x) * pull.facing) / context.torsoLength;
+    pull.frames.forEach(({ index }, at) => {
+      const x = xs[at];
+      if (at < pull.liftoff || x === null || x === undefined) return;
+      const drift = ((x - start) * pull.facing) / context.torsoLength;
       if (drift > furthest.drift) furthest = { drift, frameIndex: index };
-    }
+    });
 
     const percent = Math.round(furthest.drift * 100);
     const measured = { checkId: ID, value: furthest.drift, frameIndex: furthest.frameIndex };

@@ -1,7 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MediaPipePoseEstimator } from './adapters/pose';
-import { VideoFrameSource } from './adapters/video';
+import { CanvasRegionReader, VideoFrameSource } from './adapters/video';
 import { App } from './ui/App';
 import { UpdateNotice } from './ui/components/UpdateNotice';
 import type { AnalysisAdapters } from './ui/flow/adapters';
@@ -12,6 +12,7 @@ const adapters: AnalysisAdapters<HTMLVideoElement> = {
   openVideo: (url) => VideoFrameSource.open(url),
   createPoseEstimator: () =>
     new MediaPipePoseEstimator({ wasmBaseUrl: `${import.meta.env.BASE_URL}mediapipe/wasm` }),
+  createRegionReader: () => new CanvasRegionReader(),
 };
 
 // Before any video exists, so opening the app doesn't stop music playing in another app.

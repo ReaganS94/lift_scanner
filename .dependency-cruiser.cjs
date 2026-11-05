@@ -4,7 +4,7 @@
  */
 
 /** Pure modules: no browser APIs, no React, testable in Node. */
-const PURE = '^src/(core|geometry|signal|view|reps|lifts|analysis|report|testing)/';
+const PURE = '^src/(core|geometry|signal|view|reps|lifts|bar|analysis|report|testing)/';
 
 /**
  * What each layer may import from inside src/. Anything not listed is forbidden, so a new
@@ -17,6 +17,7 @@ const LAYERS = {
   view: ['geometry', 'signal'],
   reps: ['geometry', 'signal'],
   lifts: ['geometry', 'signal'],
+  bar: ['geometry', 'signal'],
   report: [],
   analysis: ['geometry', 'signal', 'view', 'reps', 'lifts', 'report'],
   adapters: [],
@@ -52,7 +53,7 @@ module.exports = {
       severity: 'error',
       comment: 'A test may import its own layer, the layers it may use, and src/testing.',
       from: {
-        path: '^src/(core|geometry|signal|view|reps|lifts|report|analysis)/.+\\.test\\.tsx?$',
+        path: '^src/(core|geometry|signal|view|reps|lifts|bar|report|analysis)/.+\\.test\\.tsx?$',
       },
       to: { path: '^src/(adapters|ui)/' },
     },
