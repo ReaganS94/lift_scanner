@@ -1,6 +1,7 @@
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
+import { readAppVersion } from './scripts/app-version';
 
 // GitHub Pages serves the app from /<repo-name>/, so the production build (and `vite preview`,
 // which serves that build) need that base path. The dev server stays at /.
@@ -12,13 +13,14 @@ const PAGES_BASE = '/lift_scanner/';
  */
 const POSE_RUNTIME = 'mediapipe/wasm/vision_wasm_internal.{js,wasm}';
 
+const appVersion = readAppVersion(import.meta.dirname);
+
 export default defineConfig(({ command, isPreview }) => ({
   base: command === 'build' || isPreview ? PAGES_BASE : '/',
-  // The commit being built, shown in the app so a phone can tell which version it's running.
+  // Shown in the app so a phone can tell which version it's running. See scripts/app-version.ts.
   define: {
-    'import.meta.env.VITE_APP_VERSION': JSON.stringify(
-      process.env.GITHUB_SHA?.slice(0, 7) ?? 'dev',
-    ),
+    'import.meta.env.VITE_APP_VERSION': JSON.stringify(appVersion.label),
+    'import.meta.env.VITE_APP_COMMIT': JSON.stringify(appVersion.commit ?? ''),
   },
   plugins: [
     react(),
@@ -71,7 +73,7 @@ export default defineConfig(({ command, isPreview }) => ({
     }),
   ],
   test: {
-    include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+    include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'scripts/**/*.test.ts'],
     environment: 'node',
   },
 }));

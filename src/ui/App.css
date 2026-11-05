@@ -748,3 +748,7 @@ progress::-moz-progress-bar {
   font-size: 0.75rem;
   text-align: center;
 }
+
+.version__commit {
+  opacity: 0.6;
+}
