@@ -28,4 +28,11 @@ export interface RepDetectionOptions {
   readonly minAmplitude: number;
   /** The shortest rep, in seconds. Anything quicker is treated as noise. */
   readonly minDurationSeconds: number;
+  /**
+   * When set, a rep must also travel at least this share of the way the set's biggest rep went.
+   * For lifts whose torso can look short when filmed at an angle, which inflates the model's
+   * wobble past minAmplitude. Leave unset where a short rep is a fault worth reporting, such as
+   * a squat cut high.
+   */
+  readonly minShareOfBiggestRep?: number;
 }

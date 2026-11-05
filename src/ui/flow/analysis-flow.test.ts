@@ -9,7 +9,7 @@ const prepared: PreparedClip = {
   sequence: raw,
   torsoLength: 0.25,
   nearSide: 'left',
-  viewGuess: { view: 'side', confidence: 'high', reason: '' },
+  viewGuess: { view: 'side', confidence: 'high', reason: '', angleFromSide: 5 },
 };
 const report: SetReport = {
   liftId: 'squat',

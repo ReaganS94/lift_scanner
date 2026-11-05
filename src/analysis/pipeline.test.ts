@@ -97,6 +97,31 @@ describe('pipeline', () => {
     }
   });
 
+  it('corrects a side view for the camera angle before the checks see it', () => {
+    const sequence = sequenceOf(squatSet(1));
+    const clip = { sequence, view: 'side' as const, torsoLength: TORSO, nearSide: 'left' as const };
+    const seenBy = (angleFromSide: number) => {
+      let seen: Landmark[] | null = null;
+      const recorder: FormCheck = {
+        ...sideOnly,
+        evaluate: (context) => {
+          seen = [...(context.sequence.frames[0]?.landmarks ?? [])];
+          return sideOnly.evaluate(context);
+        },
+      };
+      const report = analyzeSet({ ...clip, angleFromSide }, { ...squat, checks: [recorder] });
+      return { report, seen: seen as Landmark[] | null };
+    };
+
+    const angled = seenBy(40);
+    expect(angled.report.correctedForDegrees).toBe(40);
+    expect(angled.seen).not.toEqual(sequence.frames[0]?.landmarks);
+    expect(seenBy(70).report.correctedForDegrees).toBe(45);
+
+    const front = analyzeSet({ ...clip, view: 'front', angleFromSide: 80 }, squatWithChecks);
+    expect(front.correctedForDegrees).toBeUndefined();
+  });
+
   it('hands each pose to onFrame as soon as it is found', async () => {
     const seen: number[] = [];
     const raw = await extractPoses(fakeVideo(squatSet(1)), fakeEstimator, {

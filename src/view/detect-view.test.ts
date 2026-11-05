@@ -35,8 +35,20 @@ describe('detectView', () => {
     });
   });
 
-  it('gives no view for a 45 degree angle', () => {
-    expect(detectView(clip(turned(45))).view).toBeNull();
+  it('gives no view between 45 and 60 degrees off side-on', () => {
+    expect(detectView(clip(turned(35))).view).toBeNull();
+  });
+
+  it('calls 40 degrees off side-on a side view, unsure, and says how far off it is', () => {
+    const guess = detectView(clip(turned(50)));
+    expect(guess).toMatchObject({ view: 'side', confidence: 'low' });
+    expect(guess.angleFromSide).toBeCloseTo(40, 0);
+    expect(guess.reason).toContain('40°');
+  });
+
+  it('measures the angle from side-on', () => {
+    expect(detectView(clip(turned(20))).angleFromSide).toBeCloseTo(70, 0);
+    expect(detectView(clip(standingFigure('side'))).angleFromSide).toBeLessThan(10);
   });
 
   it('still calls it a front view at 20 degrees off square-on', () => {
@@ -48,9 +60,9 @@ describe('detectView', () => {
   });
 
   it('measures on full-length torso frames, so leaning at the bottom does not skew it', () => {
-    // Standing at 45°, then bent over towards the camera (torso foreshortened to 60%),
+    // Standing at 55° off square-on (35° from front), then bent over towards the camera (torso foreshortened to 60%),
     // which on its own would push the ratio into the front range.
-    const standing = turned(45);
+    const standing = turned(35);
     const bent = moved(standing, ['leftShoulder', 'rightShoulder'], 0, 0.1);
     const frames = [
       ...Array.from({ length: 10 }, () => standing),

@@ -10,6 +10,12 @@ export interface ViewGuess {
   readonly confidence: 'high' | 'low';
   /** A plain-language reason, shown next to the guess. */
   readonly reason: string;
+  /**
+   * Roughly how far the camera is turned away from side-on, in degrees: 0 is straight side-on,
+   * 90 is straight front-on or back-on. Null when the shoulders and hips weren't seen. Rough,
+   * since shoulder width varies from person to person: side-on clips read about 10°.
+   */
+  readonly angleFromSide: number | null;
 }
 
 /*
@@ -19,13 +25,17 @@ export interface ViewGuess {
  *
  *   ratio ≈ 0.8 × cos(angle from front)
  *
- * The cut-offs accept up to 30° off square-on in either direction. Proportions vary from
- * person to person, which is one reason the user confirms the guess.
+ * A side view is accepted up to 45° off side-on, since the side checks correct their angles for
+ * how far the camera is turned (see analysis/correct-for-camera-angle). A front or back view
+ * must be within 30° of square-on. Proportions vary from person to person, which is one reason
+ * the user confirms the guess.
  */
 const FRONT_RATIO = 0.8;
 const degrees = (value: number) => (value * Math.PI) / 180;
-/** Within 30° of side-on. */
-const SIDE_MAX_RATIO = FRONT_RATIO * Math.sin(degrees(30)); // ≈ 0.40
+/** Within 45° of side-on. */
+const SIDE_MAX_RATIO = FRONT_RATIO * Math.sin(degrees(45)); // ≈ 0.57
+/** Within 30° of side-on: no need to say the camera is at an angle. */
+const SURE_SIDE_RATIO = FRONT_RATIO * Math.sin(degrees(30)); // ≈ 0.40
 /** Within 30° of front-on. */
 const FRONT_MIN_RATIO = FRONT_RATIO * Math.cos(degrees(30)); // ≈ 0.69
 /** Within 15° of side-on: clear-cut. */
@@ -79,14 +89,21 @@ export function detectView(rawSequence: PoseSequence): ViewGuess {
       view: null,
       confidence: 'low',
       reason: "Couldn't see your shoulders and hips clearly enough to tell the camera angle.",
+      angleFromSide: null,
     };
   }
+  const angleFromSide = angleFromRatio(ratio);
 
   if (ratio <= SIDE_MAX_RATIO) {
     return {
       view: 'side',
       confidence: ratio <= CLEAR_SIDE_RATIO ? 'high' : 'low',
-      reason: 'Your shoulders overlap in the frame, which happens when filming from the side.',
+      reason:
+        ratio <= SURE_SIDE_RATIO
+          ? 'Your shoulders overlap in the frame, which happens when filming from the side.'
+          : `The camera looks about ${String(Math.round(angleFromSide))}° off side-on. ` +
+            'Angles are corrected for that, but side-on is more reliable.',
+      angleFromSide,
     };
   }
 
@@ -95,12 +112,18 @@ export function detectView(rawSequence: PoseSequence): ViewGuess {
       view: null,
       confidence: 'low',
       reason:
-        'The camera looks to be at an angle between side and front. Pick the closer view, or ' +
-        're-film square-on for more reliable checks.',
+        `The camera looks about ${String(Math.round(angleFromSide))}° off side-on, between ` +
+        'side and front. Pick the closer view, or re-film closer to side-on or front-on.',
+      angleFromSide,
     };
   }
 
-  return guessFrontOrBack(upright, ratio >= CLEAR_FRONT_RATIO);
+  return { ...guessFrontOrBack(upright, ratio >= CLEAR_FRONT_RATIO), angleFromSide };
+}
+
+/** Degrees off side-on for a shoulder-width ratio: the ratio is FRONT_RATIO × sin(angle). */
+function angleFromRatio(ratio: number): number {
+  return (Math.asin(Math.min(1, ratio / FRONT_RATIO)) * 180) / Math.PI;
 }
 
 function measureFrame(frame: PoseFrame): FrameMeasure | null {
@@ -120,7 +143,10 @@ function measureFrame(frame: PoseFrame): FrameMeasure | null {
  * when facing the camera). Only a clear, agreeing answer gets high confidence: the model is
  * known to sometimes report a face from behind.
  */
-function guessFrontOrBack(measures: readonly FrameMeasure[], clearAngle: boolean): ViewGuess {
+function guessFrontOrBack(
+  measures: readonly FrameMeasure[],
+  clearAngle: boolean,
+): Omit<ViewGuess, 'angleFromSide'> {
   const faceVisibility =
     median(measures.map((m) => m.frame.landmarks?.[0]?.visibility ?? null)) ?? 0;
   const mirroredLikeFront =

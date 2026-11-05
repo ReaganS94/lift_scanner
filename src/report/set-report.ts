@@ -11,6 +11,11 @@ export interface SetReport {
   readonly liftId: string;
   readonly view: View;
   readonly nearSide: BodySide;
+  /**
+   * For a side view, how many degrees off side-on the angles were corrected for. Absent when the
+   * camera angle wasn't known or the view isn't side.
+   */
+  readonly correctedForDegrees?: number;
   readonly sampleFps: number;
   /** The lift's rep signal for every frame, for charting the set. */
   readonly repSignal: readonly (number | null)[];

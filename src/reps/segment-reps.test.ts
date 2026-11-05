@@ -121,6 +121,27 @@ describe('segmentReps', () => {
     expect(segmentReps(jittery, FPS, OPTIONS)).toHaveLength(1);
   });
 
+  it("drops wobbles much smaller than the set's real reps", () => {
+    const big = repWave({ reps: 2, repFrames: 60, restFrames: 20, amplitude: 1.5 });
+    const wobbles = repWave({ reps: 3, repFrames: 30, restFrames: 20, amplitude: 0.5 });
+    const reps = segmentReps([...big, ...wobbles], FPS, { ...OPTIONS, minShareOfBiggestRep: 0.4 });
+    expect(reps).toHaveLength(2);
+    expect(reps.map((rep) => rep.index)).toEqual([0, 1]);
+  });
+
+  it('keeps a short rep that still goes the minimum share of the way', () => {
+    const full = repWave({ reps: 2, repFrames: 60, restFrames: 20, amplitude: 1 });
+    const short = repWave({ reps: 1, repFrames: 60, restFrames: 20, amplitude: 0.45 });
+    const signal = [...full, ...short];
+    expect(segmentReps(signal, FPS, { ...OPTIONS, minShareOfBiggestRep: 0.4 })).toHaveLength(3);
+  });
+
+  it('keeps small reps when the lift sets no minimum share', () => {
+    const full = repWave({ reps: 2, repFrames: 60, restFrames: 20, amplitude: 1.5 });
+    const short = repWave({ reps: 1, repFrames: 60, restFrames: 20, amplitude: 0.4 });
+    expect(segmentReps([...full, ...short], FPS, OPTIONS)).toHaveLength(3);
+  });
+
   it('bridges frames where the signal is missing', () => {
     const wave: (number | null)[] = repWave({
       reps: 1,

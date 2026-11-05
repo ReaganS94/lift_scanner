@@ -19,6 +19,6 @@ export const deadlift: LiftDefinition = {
   filmingTips: [
     'From straight side-on the near plate hides your hands. That’s expected: bar path follows the plate instead, so keep the whole plate in the picture from the floor to lockout.',
     'Filming closer, higher or with the 0.5× lens won’t uncover your hands. Use the 1× lens about 3 m away, so the edges of the picture don’t bend.',
-    'Don’t turn the camera to see your hands. At an angle, hip and knee angles look squashed and lockout can’t be judged.',
+    'Don’t turn the camera to see your hands. Hip and knee angles are corrected for a camera up to about 45° off side-on, but at an angle the plate looks oval and bar path can’t be followed.',
   ],
 };
