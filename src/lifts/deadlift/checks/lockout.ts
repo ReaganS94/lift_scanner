@@ -1,4 +1,5 @@
 import type { BarPoint, CheckResult, FormCheck, PoseFrame, RepContext } from '../../../core';
+import { trustedPlates } from '../../../bar';
 import { forwardTilt, sidePoint, type Facing } from '../../../geometry';
 import { repFrames } from '../../../signal';
 import { hiddenByPlate } from '../hidden-by-plate';
@@ -23,6 +24,10 @@ const ID = 'deadlift.lockout';
  * Filmed from the side, the near plate covers the knees at the top, so the knee point is only
  * a guess. Then the knees aren't judged, and the hips are measured against the line from hip to
  * ankle instead of the thigh: with the knees straight the two are the same line.
+ *
+ * Any plate the tracker was sure of counts here (see trustedPlates), even when it wasn't found
+ * for enough of the rep to follow the bar: the plate only needs to be seen at the top to hide
+ * the knees there.
  */
 export const lockout: FormCheck = {
   id: ID,
@@ -34,12 +39,11 @@ export const lockout: FormCheck = {
     if (!pull) return skipped("The bar or hips weren't followed clearly from the floor.");
 
     const window = TOP_WINDOW_SECONDS * context.sequence.sampleFps;
+    const plates = trustedPlates(context.sequence.barTrack ?? []);
     let best: (Bends & { frameIndex: number }) | null = null;
     for (const { frame, index } of repFrames(context)) {
       if (Math.abs(index - context.rep.turnFrame) > window) continue;
-      // The plate only counts when the pull trusted it as the bar, not a round thing nearby.
-      const plate = pull.tracker === 'plate' ? context.sequence.barTrack?.[index] : null;
-      const bends = bendsAt(frame, context, pull.facing, plate);
+      const bends = bendsAt(frame, context, pull.facing, plates[index]);
       if (!bends) continue;
       // Measuring both joints beats measuring only the hips; then the least bent moment wins.
       const better =
