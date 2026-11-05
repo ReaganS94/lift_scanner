@@ -2,7 +2,7 @@ import type { BarPoint, CheckResult, FormCheck, PoseFrame, RepContext } from '..
 import { trustedPlates } from '../../../bar';
 import { forwardTilt, sidePoint, type Facing } from '../../../geometry';
 import { repFrames } from '../../../signal';
-import { hiddenByPlate } from '../hidden-by-plate';
+import { hiddenByPlate, platesOnTheBar } from '../hidden-by-plate';
 import { pullOf, torsoLean } from '../pull';
 
 /**
@@ -27,7 +27,8 @@ const ID = 'deadlift.lockout';
  *
  * Any plate the tracker was sure of counts here (see trustedPlates), even when it wasn't found
  * for enough of the rep to follow the bar: the plate only needs to be seen at the top to hide
- * the knees there.
+ * the knees there. It must have risen with the bar (see platesOnTheBar), so a round outline
+ * that isn't the bar can't hide them.
  */
 export const lockout: FormCheck = {
   id: ID,
@@ -39,7 +40,7 @@ export const lockout: FormCheck = {
     if (!pull) return skipped("The bar or hips weren't followed clearly from the floor.");
 
     const window = TOP_WINDOW_SECONDS * context.sequence.sampleFps;
-    const plates = trustedPlates(context.sequence.barTrack ?? []);
+    const plates = platesOnTheBar(context, trustedPlates(context.sequence.barTrack ?? []));
     let best: (Bends & { frameIndex: number }) | null = null;
     for (const { frame, index } of repFrames(context)) {
       if (Math.abs(index - context.rep.turnFrame) > window) continue;

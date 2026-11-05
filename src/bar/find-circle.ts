@@ -107,7 +107,8 @@ function mostVoted<T extends Peak>(peaks: readonly T[]): T | null {
 function largestClear(edges: Edges, peaks: readonly Peak[], minScore: number): Circle | null {
   const scored = peaks.map((peak) => ({ ...peak, score: coverage(edges, peak) }));
   const clear = scored.filter((peak) => peak.score >= minScore);
-  const largest = clear[clear.length - 1];
+  let largest: (typeof clear)[number] | undefined;
+  for (const peak of clear) if (!largest || peak.radius > largest.radius) largest = peak;
   if (!largest) return null;
   const same = clear.filter(
     (peak) =>

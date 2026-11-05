@@ -4,6 +4,7 @@ import { cleanPoses } from '../../../signal';
 import {
   between,
   DEADLIFT_SETUP,
+  DEADLIFT_TORSO,
   sideDeadliftRep,
   type DeadliftPosition,
 } from '../../../testing/deadlift-pose';
@@ -119,6 +120,21 @@ describe('deadlift lockout', () => {
     it('still judges the knees behind a plate the tracker was unsure of', () => {
       const context = plateOverKnees(sideDeadliftRep(), 0.04, { confidence: 0.5 });
       expect(lockout.evaluate(context)).toMatchObject({ status: 'fail' });
+    });
+
+    it("doesn't let a round outline that stays put hide the knees", () => {
+      // A steady circle round the knee, of a size the tracker looks for, as a curved outline
+      // by the legs could give: it doesn't rise with the bar, so the guessed knee is judged.
+      const guessed = plateOverKnees(sideDeadliftRep());
+      const barTrack = guessed.sequence.frames.map((frame) => {
+        const knee = frame.landmarks?.[LANDMARK.leftKnee];
+        return knee
+          ? { x: knee.x, y: knee.y, radius: 0.5 * DEADLIFT_TORSO, confidence: 0.9 }
+          : null;
+      });
+      expect(
+        lockout.evaluate({ ...guessed, sequence: { ...guessed.sequence, barTrack } }),
+      ).toMatchObject({ status: 'fail' });
     });
 
     it('still catches hips short of lockout, measured to the ankle', () => {

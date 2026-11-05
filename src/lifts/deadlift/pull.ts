@@ -36,7 +36,7 @@ const SEEN_SHARE = 0.8;
  * rise over the rep. In a pull from the floor the bar rises about as much as the shoulders; a
  * round thing that stays put, such as a plate leaning on a wall, doesn't rise at all.
  */
-const MIN_RISE_SHARE_OF_SHOULDERS = 0.5;
+export const MIN_RISE_SHARE_OF_SHOULDERS = 0.5;
 /**
  * When the hands and knees are both seen, the bar reaches the knees when the hands do.
  * Otherwise it is taken to reach them once the tracked points have covered this share of their
