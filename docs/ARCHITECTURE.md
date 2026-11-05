@@ -425,7 +425,13 @@ different times.
 - **Lockout** uses signed tilts (`forwardTilt`) rather than joint angles, so
   leaning back at the top counts as locked out instead of as a hip that hasn't
   straightened. It takes the best moment within 0.25 s of where the bar was
-  highest.
+  highest. From the side the near plate covers the knees at the top, and the
+  model still places the knee, often confidently and wrongly (Reagan's first gym
+  clip read 32° of knee bend on straight legs). So a knee inside the tracked
+  plate's circle, or not seen, isn't judged: the hips are then measured against
+  the hip-to-ankle line, which is the thigh's line when the knee is straight, and
+  the message says only the hips were checked. With the knee slightly bent the
+  hip-to-ankle line leans less than the thigh, so the hips read a little lenient.
 - **Bar path** follows the plate's centre, or the hands where the plate wasn't
   found, and skips reps where neither was followed. Positions are steadied with a
   median over 2 frames either side, so one misplaced frame can't fail a rep.

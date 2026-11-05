@@ -1,6 +1,7 @@
-import type { CheckResult, FormCheck, PoseFrame, RepContext } from '../../../core';
+import type { BarPoint, CheckResult, FormCheck, PoseFrame, RepContext } from '../../../core';
 import { forwardTilt, sidePoint, type Facing } from '../../../geometry';
 import { repFrames } from '../../../signal';
+import { hiddenByPlate } from '../hidden-by-plate';
 import { pullOf, torsoLean } from '../pull';
 
 /**
@@ -16,7 +17,13 @@ const TOP_WINDOW_SECONDS = 0.25;
 
 const ID = 'deadlift.lockout';
 
-/** Full lockout: hips and knees straight at the top of the rep. */
+/**
+ * Full lockout: hips and knees straight at the top of the rep.
+ *
+ * Filmed from the side, the near plate covers the knees at the top, so the knee point is only
+ * a guess. Then the knees aren't judged, and the hips are measured against the line from hip to
+ * ankle instead of the thigh: with the knees straight the two are the same line.
+ */
 export const lockout: FormCheck = {
   id: ID,
   label: 'Lockout',
@@ -27,65 +34,96 @@ export const lockout: FormCheck = {
     if (!pull) return skipped("The bar or hips weren't followed clearly from the floor.");
 
     const window = TOP_WINDOW_SECONDS * context.sequence.sampleFps;
-    let best: { hips: number; knees: number; frameIndex: number } | null = null;
+    let best: (Bends & { frameIndex: number }) | null = null;
     for (const { frame, index } of repFrames(context)) {
       if (Math.abs(index - context.rep.turnFrame) > window) continue;
-      const bends = bendsAt(frame, context, pull.facing);
+      // The plate only counts when the pull trusted it as the bar, not a round thing nearby.
+      const plate = pull.tracker === 'plate' ? context.sequence.barTrack?.[index] : null;
+      const bends = bendsAt(frame, context, pull.facing, plate);
       if (!bends) continue;
-      if (best === null || Math.max(bends.hips, bends.knees) < Math.max(best.hips, best.knees)) {
-        best = { ...bends, frameIndex: index };
-      }
+      // Measuring both joints beats measuring only the hips; then the least bent moment wins.
+      const better =
+        best === null ||
+        (bends.knees !== null && best.knees === null) ||
+        ((bends.knees === null) === (best.knees === null) && worstOf(bends) < worstOf(best));
+      if (better) best = { ...bends, frameIndex: index };
     }
-    if (!best) return skipped("The hips or knees weren't seen clearly at the top.");
+    if (!best) return skipped("The hips or legs weren't seen clearly at the top.");
 
     const hips = Math.max(0, Math.round(best.hips));
-    const knees = Math.max(0, Math.round(best.knees));
-    const worst = Math.max(hips, knees);
-    const measured = {
-      checkId: ID,
-      value: Math.max(best.hips, best.knees),
-      frameIndex: best.frameIndex,
-    };
+    const knees = best.knees === null ? null : Math.max(0, Math.round(best.knees));
+    const worst = Math.max(hips, knees ?? 0);
+    const measured = { checkId: ID, value: worstOf(best), frameIndex: best.frameIndex };
+    const kneesNote =
+      best.kneeHidden === 'plate'
+        ? ' Your knees were behind the plate, so only the hips were checked.'
+        : best.kneeHidden === 'unseen'
+          ? ' Your knees weren’t seen clearly, so only the hips were checked.'
+          : '';
     if (worst <= PASS_UP_TO_DEGREES) {
-      return { ...measured, status: 'pass', message: 'Hips and knees locked out.' };
+      return {
+        ...measured,
+        status: 'pass',
+        message: (knees === null ? 'Hips locked out.' : 'Hips and knees locked out.') + kneesNote,
+      };
     }
     return {
       ...measured,
       status: worst <= WARN_UP_TO_DEGREES ? 'warn' : 'fail',
-      message: shortfallMessage(hips, knees),
+      message: shortfallMessage(hips, knees) + kneesNote,
     };
   },
 };
 
+interface Bends {
+  readonly hips: number;
+  /** Null when the knee was hidden, so it wasn't measured. */
+  readonly knees: number | null;
+  /** Why the knee wasn't measured, or null when it was. */
+  readonly kneeHidden: 'plate' | 'unseen' | null;
+}
+
+function worstOf(bends: Bends): number {
+  return Math.max(bends.hips, bends.knees ?? -Infinity);
+}
+
 /**
  * How bent the near-side hip and knee are, in degrees (0 is straight, negative is bent back).
  * Signed tilts are used rather than joint angles, so leaning back at the top isn't mistaken
- * for a hip that hasn't straightened.
+ * for a hip that hasn't straightened. Without a knee that can be seen, the hip is measured
+ * against the hip-to-ankle line and the knee isn't measured.
  */
 function bendsAt(
   frame: PoseFrame,
   context: RepContext,
   facing: Facing,
-): { hips: number; knees: number } | null {
+  plate: BarPoint | null | undefined,
+): Bends | null {
   const hip = sidePoint(frame, context.nearSide, 'Hip');
-  const knee = sidePoint(frame, context.nearSide, 'Knee');
   const ankle = sidePoint(frame, context.nearSide, 'Ankle');
   const torso = torsoLean(frame, context.nearSide, facing);
-  if (!hip || !knee || !ankle || torso === null) return null;
+  if (!hip || !ankle || torso === null) return null;
+
+  const knee = sidePoint(frame, context.nearSide, 'Knee');
+  const kneeHidden = !knee ? 'unseen' : hiddenByPlate(knee, plate) ? 'plate' : null;
+  if (!knee || kneeHidden) {
+    const leg = forwardTilt(hip, ankle, facing);
+    return leg === null ? null : { hips: torso + leg, knees: null, kneeHidden };
+  }
   const thigh = forwardTilt(hip, knee, facing);
   const shin = forwardTilt(knee, ankle, facing);
   if (thigh === null || shin === null) return null;
-  return { hips: torso + thigh, knees: thigh - shin };
+  return { hips: torso + thigh, knees: thigh - shin, kneeHidden: null };
 }
 
-function shortfallMessage(hips: number, knees: number): string {
-  const short = (degrees: number) => degrees > PASS_UP_TO_DEGREES;
-  if (short(hips) && short(knees)) {
+function shortfallMessage(hips: number, knees: number | null): string {
+  const short = (degrees: number | null) => degrees !== null && degrees > PASS_UP_TO_DEGREES;
+  if (short(hips) && knees !== null && short(knees)) {
     return `Hips stayed ${String(hips)}° and knees ${String(knees)}° short of locked out.`;
   }
   return short(hips)
     ? `Hips stayed ${String(hips)}° short of locked out.`
-    : `Knees stayed ${String(knees)}° bent at the top.`;
+    : `Knees stayed ${String(knees ?? 0)}° bent at the top.`;
 }
 
 function skipped(message: string): CheckResult {
