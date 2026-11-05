@@ -1,4 +1,10 @@
-import type { BodySide, LandmarkName, PoseFrame, RepContext } from '../../core';
+import {
+  TRUSTED_PLATE_CONFIDENCE,
+  type BodySide,
+  type LandmarkName,
+  type PoseFrame,
+  type RepContext,
+} from '../../core';
 import {
   averagePoint,
   forwardTilt,
@@ -31,13 +37,6 @@ const SEEN_SHARE = 0.8;
  * round thing that stays put, such as a plate leaning on a wall, doesn't rise at all.
  */
 const MIN_RISE_SHARE_OF_SHOULDERS = 0.5;
-/**
- * The plate only follows the bar if, over the rep, a median of at least this share of its edge
- * was found. Filmed straight side-on the plate is a clean circle (a median of 0.83 on Reagan's
- * first gym clip). Filmed at an angle it is an oval, and the tracker can settle on part of it
- * and still rise with the bar (0.6 on a clip about 35° off side-on), placing the bar wrongly.
- */
-const MIN_PLATE_CONFIDENCE = 0.7;
 /**
  * When the hands and knees are both seen, the bar reaches the knees when the hands do.
  * Otherwise it is taken to reach them once the tracked points have covered this share of their
@@ -120,7 +119,7 @@ export function pullOf(context: RepContext): Pull | null {
       .slice(rep.startFrame, rep.endFrame + 1)
       .map((point) => point?.confidence ?? null),
   );
-  const plateTrusted = plateConfidence !== null && plateConfidence >= MIN_PLATE_CONFIDENCE;
+  const plateTrusted = plateConfidence !== null && plateConfidence >= TRUSTED_PLATE_CONFIDENCE;
   const tracker: BarTracker =
     plateTrusted && followsBar(plate) ? 'plate' : followsBar(hands) ? 'hands' : 'shoulders';
   const trackedPoints = tracker === 'plate' ? plate : tracker === 'hands' ? hands : shoulders;

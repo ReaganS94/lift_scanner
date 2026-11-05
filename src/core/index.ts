@@ -10,6 +10,7 @@ export type {
 export { LANDMARK, LANDMARK_COUNT } from './landmarks';
 export type { BodyJoint, BodySide, Landmark, LandmarkName } from './landmarks';
 export type { LiftDefinition } from './lift';
+export { TRUSTED_PLATE_CONFIDENCE } from './bar';
 export type { BarPoint } from './bar';
 export type { FrameRegion, GrayImage } from './image';
 export type { PoseFrame, PoseSequence } from './pose';

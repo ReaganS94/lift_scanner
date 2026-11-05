@@ -6,3 +6,4 @@ export { findCircle } from './find-circle';
 export type { Circle, CircleSearch } from './find-circle';
 export { createPlateTracker } from './plate-tracker';
 export type { PlateTracker, ReadRegion } from './plate-tracker';
+export { trustedPlates } from './trusted-plates';

@@ -709,7 +709,14 @@ else is pure, in `src/bar/`.
 - Pictures are read at a scale that makes the plate about 24 pixels in radius,
   so each frame's search is small next to the pose model's.
 - The results video draws the plate's outline and the last 3 s of its path, so
-  what the tracker found can be checked by eye.
+  what the tracker found can be checked by eye. Only locks the plate is trusted
+  in are drawn (`trustedPlates`): a lock is a stretch followed without starting
+  again, and it is trusted when its median
+  confidence is at least `TRUSTED_PLATE_CONFIDENCE` (0.7). Judged per lock, not
+  per frame, because on a clean side-on clip the score dips to about 0.6 at
+  lockout. This hides weak locks such as a partial oval, but it is not the
+  checks' own test (median per rep plus the rise guard): a clean but wrong
+  circle, such as the far plate filmed face-on (0.88), is still drawn.
 - On a made-up clip (the sample photo with a plate drawn on, rising 200 px and
   drifting 40 px) it followed the plate in 178 of 181 frames, within 3 px.
 - On Reagan's first gym clip (27 s, iPhone, side-on from floor level) it found
@@ -719,7 +726,8 @@ else is pure, in `src/bar/`.
   half as much as the shoulders over the rep. A round thing that stays put, such
   as a plate leaning on a wall, falls back to the shoulders, so a wrong lock can
   cost bar path but never the other checks.
-- It also needs a median confidence of at least 0.7 over the rep. Straight
+- It also needs a median confidence of at least 0.7 (`TRUSTED_PLATE_CONFIDENCE`)
+  over the rep. Straight
   side-on the plate is a clean circle (median 0.83 on that clip). On a clip
   filmed about 35° off side-on the plate is an oval, and the tracker settled on
   part of it while still rising with the bar (median 0.49), which would have

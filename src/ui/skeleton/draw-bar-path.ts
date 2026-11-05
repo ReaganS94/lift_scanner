@@ -1,13 +1,17 @@
+import { trustedPlates } from '../../bar';
 import type { BarPoint } from '../../core';
 
 /** How much of the bar's path to draw behind it, in seconds: about one rep. */
 const TRAIL_SECONDS = 3;
+/** The trusted part of each track, worked out once per track rather than on every frame. */
+const trustedByTrack = new WeakMap<readonly (BarPoint | null)[], (BarPoint | null)[]>();
 
 /**
  * Draws where the bar tracker found the plate in this frame, as a ring round the plate, and the
- * path its centre took over the last few seconds. Gaps where it wasn't found are left as gaps,
- * so the drawing never shows more than was found. Positions are in frame heights (see Landmark),
- * multiplied by `scale`, the drawn frame height.
+ * path its centre took over the last few seconds. Gaps where it wasn't found, or where the plate
+ * can't be trusted (see trustedPlates), are left as gaps, so the drawing never shows more than
+ * was found. Positions are in frame heights (see Landmark), multiplied by `scale`, the drawn
+ * frame height.
  */
 export function drawBarPath(
   context: CanvasRenderingContext2D,
@@ -18,6 +22,12 @@ export function drawBarPath(
   colour: string,
 ): void {
   const first = Math.max(0, frameIndex - Math.round(TRAIL_SECONDS * sampleFps));
+  let trusted = trustedByTrack.get(track);
+  if (!trusted) {
+    trusted = trustedPlates(track);
+    trustedByTrack.set(track, trusted);
+  }
+  const pointAt = (index: number) => trusted[index] ?? null;
   context.save();
   context.lineCap = 'round';
   context.lineJoin = 'round';
@@ -28,7 +38,7 @@ export function drawBarPath(
   context.beginPath();
   let drawing = false;
   for (let index = first; index <= frameIndex && index < track.length; index++) {
-    const point = track[index];
+    const point = pointAt(index);
     if (!point) {
       drawing = false;
       continue;
@@ -39,7 +49,7 @@ export function drawBarPath(
   }
   context.stroke();
 
-  const current = track[frameIndex];
+  const current = pointAt(frameIndex);
   if (current) {
     context.globalAlpha = 1;
     context.lineWidth = 2;
