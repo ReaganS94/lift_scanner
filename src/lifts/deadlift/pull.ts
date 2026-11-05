@@ -26,6 +26,12 @@ const FLOOR_LOOKBACK_SECONDS = 1;
  */
 const SEEN_SHARE = 0.8;
 /**
+ * The plate or hands only follow the bar if they rise at least this share of what the shoulders
+ * rise over the rep. In a pull from the floor the bar rises about as much as the shoulders; a
+ * round thing that stays put, such as a plate leaning on a wall, doesn't rise at all.
+ */
+const MIN_RISE_SHARE_OF_SHOULDERS = 0.5;
+/**
  * When the hands and knees are both seen, the bar reaches the knees when the hands do.
  * Otherwise it is taken to reach them once the tracked points have covered this share of their
  * rise from the floor to lockout: for a conventional pull the hands pass the knees about a
@@ -83,13 +89,31 @@ export function pullOf(context: RepContext): Pull | null {
     sequence.frames.map((frame) => averagePoint(frame, names));
   const plate: readonly (Vec2 | null)[] = sequence.barTrack ?? sequence.frames.map(() => null);
   const hands = pointsOf(WRISTS);
-  const seenInRep = (points: readonly (Vec2 | null)[]) => {
-    const inRep = points.slice(rep.startFrame, rep.endFrame + 1);
-    return inRep.filter((point) => point).length / Math.max(1, inRep.length) >= SEEN_SHARE;
+  const shoulders = pointsOf(SHOULDERS);
+  /** How far some points rise from their lowest before the rep to their highest in it. */
+  const riseOf = (points: readonly (Vec2 | null)[]): number | null => {
+    const before = maxOf(points.slice(lookbackStart, rep.startFrame + 1).map((p) => p?.y ?? null));
+    const during = points.slice(rep.startFrame, rep.endFrame + 1).map((p) => p?.y ?? null);
+    const top = minOf(during);
+    return before === null || top === null ? null : before - top;
   };
-  const tracker: BarTracker = seenInRep(plate) ? 'plate' : seenInRep(hands) ? 'hands' : 'shoulders';
-  const trackedPoints =
-    tracker === 'plate' ? plate : tracker === 'hands' ? hands : pointsOf(SHOULDERS);
+  const shoulderRise = riseOf(shoulders);
+  const followsBar = (points: readonly (Vec2 | null)[]): boolean => {
+    const inRep = points.slice(rep.startFrame, rep.endFrame + 1);
+    const seen = inRep.filter((point) => point).length / Math.max(1, inRep.length);
+    if (seen < SEEN_SHARE) return false;
+    // Something round that never moved, such as a plate leaning on a wall, isn't the bar.
+    const rise = riseOf(points);
+    return (
+      rise !== null && (shoulderRise === null || rise >= MIN_RISE_SHARE_OF_SHOULDERS * shoulderRise)
+    );
+  };
+  const tracker: BarTracker = followsBar(plate)
+    ? 'plate'
+    : followsBar(hands)
+      ? 'hands'
+      : 'shoulders';
+  const trackedPoints = tracker === 'plate' ? plate : tracker === 'hands' ? hands : shoulders;
   const trackedY = trackedPoints.map((point) => point?.y ?? null);
 
   const lookback = trackedY.slice(lookbackStart, rep.startFrame + 1);
@@ -179,6 +203,11 @@ function lastOnFloorAfter(
     last = index;
   }
   return -1;
+}
+
+function minOf(values: readonly (number | null)[]): number | null {
+  const seen = values.filter((value): value is number => value !== null);
+  return seen.length > 0 ? Math.min(...seen) : null;
 }
 
 function maxOf(values: readonly (number | null)[]): number | null {

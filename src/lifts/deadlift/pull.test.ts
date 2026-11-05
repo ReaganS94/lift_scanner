@@ -83,6 +83,20 @@ describe('pullOf', () => {
         expect(pullOf(withPlate())?.tracker).toBe('plate');
       });
 
+      it('ignores a round thing that never moves, such as a plate leaning on a wall', () => {
+        const context = hidden();
+        const barTrack = context.sequence.frames.map(() => ({
+          x: 0.4,
+          y: 0.85,
+          radius: 0.11,
+          confidence: 0.9,
+        }));
+        const stationary = { ...context, sequence: { ...context.sequence, barTrack } };
+        const pull = pullOf(stationary);
+        expect(pull?.tracker).toBe('shoulders');
+        expect(pull?.frames[0]?.index).toBe(pullOf(hidden())?.frames[0]?.index);
+      });
+
       it('finds the same floor, liftoff and knee height as the hands would', () => {
         const fromPlate = pullOf(withPlate());
         const fromHands = pullOf(sideDeadliftRep());
