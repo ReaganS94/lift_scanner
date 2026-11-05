@@ -101,4 +101,22 @@ describe('pickLifter', () => {
     const picked = pickLifter(clip([behind, hidden], 200));
     expect(hipsX(picked).slice(60, 90)).toEqual(Array<null>(30).fill(null));
   });
+
+  it('picks the lifter when the tracker follows someone behind them the whole clip', () => {
+    // The tracker lists the background person in every frame; the finder adds the lifter one
+    // frame in five. Being listed more often mustn't win it for the background person.
+    for (const [scale, wobble] of [
+      [0.25, 0.02],
+      [0.3, 0.05],
+      [0.35, 0.02],
+    ] as const) {
+      const background = (frame: number) =>
+        personAt(0.42 + wobble * Math.sin(frame / 7), scale, 0.1);
+      const lifterOnFinderFrames = (frame: number) => (frame % 5 === 0 ? lifter(frame) : null);
+      const picked = pickLifter(clip([background, lifterOnFinderFrames], 300));
+      const onLifter = hipsX(picked).filter((x) => x === 0.2).length;
+      expect(onLifter).toBe(60);
+      expect(hipsX(picked).filter((x) => x !== null && x !== 0.2)).toEqual([]);
+    }
+  });
 });

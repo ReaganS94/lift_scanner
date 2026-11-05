@@ -55,17 +55,24 @@ export function pickLifter(sequence: PoseSequence): PoseSequence {
 }
 
 /**
- * Bigger for the more likely lifter: frames seen, times the torso's size, less the more the
- * person wanders sideways. Sideways only, since a lift moves the torso up and down.
+ * Bigger for the more likely lifter: how long the person was there, times the torso's size, less
+ * the more they wander sideways. Sideways only, since a lift moves the torso up and down.
+ *
+ * How long is the time from first to last sighting, not the number of sightings: the person the
+ * pose adapter's tracker follows is seen in every frame, everyone else only when its finder
+ * looks (one frame in five), and that mustn't hand the tracked person the win.
  */
 export function lifterScore(track: PersonTrack): number {
   const { sightings } = track;
+  const first = sightings[0];
+  const last = sightings[sightings.length - 1];
   const { torso } = usualPlace(sightings);
-  if (torso === 0) return 0;
+  if (!first || !last || torso === 0) return 0;
+  const frames = last.frameIndex - first.frameIndex + 1;
   // The middle 80%, so walking in at the start or out at the end doesn't count against them.
   const xs = sightings.map((sighting) => sighting.centre.x);
   const wander = (percentile(xs, 0.9) ?? 0) - (percentile(xs, 0.1) ?? 0);
-  return (sightings.length * torso) / (1 + wander / torso);
+  return (frames * torso) / (1 + wander / torso);
 }
 
 /** Where a track's torso usually is, and its usual length. */

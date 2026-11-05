@@ -591,10 +591,13 @@ hindsight:
    the first is kept. Each sighting goes to the nearest track that could have
    moved there (up to 6 torso lengths a second, plus 0.3 for jitter), and a
    track unseen for 0.5 s ends.
-2. Each track scores frames seen × median torso length ÷ (1 + sideways wander
-   in torso lengths), where wander is the spread of the torso's middle between
-   its 10th and 90th percentiles. The lifter is there longest, closest to the
-   phone (biggest) and stays over the bar; others walk, lunge or carry.
+2. Each track scores the time from its first to last sighting (in frames) ×
+   median torso length ÷ (1 + sideways wander in torso lengths), where wander
+   is the spread of the torso's middle between its 10th and 90th percentiles.
+   The lifter is there longest, closest to the phone (biggest) and stays over
+   the bar; others walk, lunge or carry. Time, not the number of sightings: the
+   tracked person is seen every frame and everyone else only in finder frames,
+   which would otherwise hand the win to whoever the tracker latched onto.
 3. The best track becomes `landmarks` in every frame, joined by any other
    track that doesn't overlap it in time, sits within 1.5 torso lengths of the
    lifter's usual place and is about their size (the model sometimes loses the
@@ -602,8 +605,15 @@ hindsight:
    get no pose even if someone else was there: measuring the wrong person is
    worse than measuring nobody.
 
-The live skeleton shown while a clip is read still shows the model's first
-person, since the choice needs the whole clip.
+Limits:
+
+- A lifter who walks off and comes back to a different spot (to chalk up, say)
+  becomes a separate track that isn't joined back, so only one of the two
+  stretches is measured.
+- The live skeleton shown while a clip is read still shows the tracked person,
+  since the choice needs the whole clip.
+- "Download pose data" includes everyone found, so the file can be up to about
+  three times bigger than before.
 
 ## Installing on a phone
 
