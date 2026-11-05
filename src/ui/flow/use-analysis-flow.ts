@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useReducer, useRef } from 'react';
-import { analyzeSet, ExtractionCancelledError, extractPoses, prepareClip } from '../../analysis';
+import {
+  analyzeSet,
+  ExtractionCancelledError,
+  extractPoses,
+  prepareClip,
+  type ExtractPosesOptions,
+} from '../../analysis';
+import { createPlateTracker } from '../../bar';
 import type { PoseEstimator, View } from '../../core';
 import { liftRegistry } from '../../lifts';
 import { abortable } from './abortable';
@@ -57,6 +64,7 @@ export function useAnalysisFlow<TImage>(adapters: AnalysisAdapters<TImage>) {
         source = await abortable(opening, signal);
         estimator.current ??= adapters.createPoseEstimator();
         await abortable(estimator.current.init(), signal);
+        const trackBar = barTrackerFor(liftId, source.aspectRatio, adapters);
 
         const raw = await extractPoses(source, estimator.current, {
           sampleFps: SAMPLE_FPS,
@@ -67,6 +75,7 @@ export function useAnalysisFlow<TImage>(adapters: AnalysisAdapters<TImage>) {
             if (isCurrent()) livePose.current = { pose, aspectRatio };
           },
           isCancelled: () => signal.aborted,
+          ...(trackBar ? { trackBar } : {}),
         });
         if (isCurrent()) dispatch({ type: 'extracted', raw, prepared: prepareClip(raw) });
       } catch (error) {
@@ -129,6 +138,19 @@ export function useAnalysisFlow<TImage>(adapters: AnalysisAdapters<TImage>) {
   }, [releaseVideo]);
 
   return { state, livePose, start, cancel, confirmView, changeView, reset };
+}
+
+/** A bar tracker for this clip, if the lift follows the bar. */
+function barTrackerFor<TImage>(
+  liftId: string,
+  aspectRatio: number,
+  adapters: AnalysisAdapters<TImage>,
+): ExtractPosesOptions<TImage>['trackBar'] {
+  if (!liftRegistry.get(liftId)?.followsBar) return undefined;
+  const tracker = createPlateTracker(aspectRatio);
+  const reader = adapters.createRegionReader();
+  return (frame, pose) =>
+    tracker.track(pose, (region, pixelsPerUnit) => reader.read(frame.image, region, pixelsPerUnit));
 }
 
 function messageOf(error: unknown): string {

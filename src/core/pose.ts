@@ -1,3 +1,4 @@
+import type { BarPoint } from './bar';
 import type { Landmark } from './landmarks';
 
 /** The pose found in one sampled video frame. */
@@ -15,4 +16,9 @@ export interface PoseSequence {
   /** The video's width divided by its height, e.g. 0.5625 for a portrait 9:16 clip. */
   readonly aspectRatio: number;
   readonly frames: readonly PoseFrame[];
+  /**
+   * The bar's end in each frame, one entry per frame (null where it wasn't found). Absent when
+   * the bar wasn't followed, which is the case for lifts that don't ask for it.
+   */
+  readonly barTrack?: readonly (BarPoint | null)[];
 }

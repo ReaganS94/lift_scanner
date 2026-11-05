@@ -1,5 +1,6 @@
 import { useEffect, useRef, type RefObject } from 'react';
 import type { BodyJoint, PoseSequence } from '../../../core';
+import { drawBarPath } from '../../skeleton/draw-bar-path';
 import {
   drawSkeleton,
   fitCanvas,
@@ -22,13 +23,13 @@ interface SkeletonOverlayProps {
 /**
  * Draws the tracked skeleton on a canvas laid over the video, following playback. With a
  * highlight, the joints a check looked at, and the lines between them, are drawn thicker in the
- * result's colour.
+ * result's colour. Where the bar was followed, its plate and recent path are drawn too.
  */
 export function SkeletonOverlay({ sequence, videoRef, highlight }: SkeletonOverlayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const highlightRef = useRef(highlight);
   // Colours are read from the theme once per highlight, not on every animation frame.
-  const styleRef = useRef<SkeletonStyle | null>(null);
+  const styleRef = useRef<OverlayStyle | null>(null);
   const redrawRef = useRef<() => void>(() => undefined);
 
   useEffect(() => {
@@ -84,13 +85,19 @@ export function SkeletonOverlay({ sequence, videoRef, highlight }: SkeletonOverl
   return <canvas ref={canvasRef} className="skeleton-overlay" aria-hidden="true" />;
 }
 
+interface OverlayStyle extends SkeletonStyle {
+  /** Colour of the bar's plate and path. */
+  readonly barColour: string;
+}
+
 /** The skeleton's colours from the theme (styles/theme.css), with the highlight if any. */
 function skeletonStyle(
   canvas: HTMLCanvasElement,
   highlight: SkeletonHighlight | null,
-): SkeletonStyle {
+): OverlayStyle {
   return {
     colour: themeColour(canvas, 'accent', '#c8f031'),
+    barColour: themeColour(canvas, 'bar-path', '#38bdf8'),
     ...(highlight && {
       focus: {
         joints: highlight.joints,
@@ -104,7 +111,7 @@ function drawFrame(
   canvas: HTMLCanvasElement,
   sequence: PoseSequence,
   frameIndex: number,
-  style: SkeletonStyle,
+  style: OverlayStyle,
 ) {
   fitCanvas(canvas);
   const context = canvas.getContext('2d');
@@ -113,4 +120,14 @@ function drawFrame(
 
   const landmarks = sequence.frames[frameIndex]?.landmarks;
   if (landmarks) drawSkeleton(context, landmarks, canvas.height, style);
+  if (sequence.barTrack) {
+    drawBarPath(
+      context,
+      sequence.barTrack,
+      frameIndex,
+      sequence.sampleFps,
+      canvas.height,
+      style.barColour,
+    );
+  }
 }

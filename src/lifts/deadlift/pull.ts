@@ -6,6 +6,7 @@ import {
   SHOULDERS,
   WRISTS,
   type Facing,
+  type Vec2,
 } from '../../geometry';
 import type { IndexedFrame } from '../../signal';
 
@@ -17,11 +18,19 @@ const LIFTOFF_TORSOS = 0.05;
  */
 const FLOOR_LOOKBACK_SECONDS = 1;
 /**
- * The hands follow the bar when they're seen in at least this share of the rep's frames.
- * Otherwise, as when the plates hide them in a side view, the shoulders stand in for them. The
- * knees are compared against the hands when they're seen in this share of the pull's frames.
+ * What follows the bar, in order of preference: the near plate when it was found in at least
+ * this share of the rep's frames, then the hands when they were seen in that share. Otherwise,
+ * as when the plates hide the hands in a side view and the plate wasn't found, the shoulders
+ * stand in for them. The knees are compared against the bar when they're seen in this share of
+ * the pull's frames.
  */
-const HANDS_SEEN_SHARE = 0.8;
+const SEEN_SHARE = 0.8;
+/**
+ * The plate or hands only follow the bar if they rise at least this share of what the shoulders
+ * rise over the rep. In a pull from the floor the bar rises about as much as the shoulders; a
+ * round thing that stays put, such as a plate leaning on a wall, doesn't rise at all.
+ */
+const MIN_RISE_SHARE_OF_SHOULDERS = 0.5;
 /**
  * When the hands and knees are both seen, the bar reaches the knees when the hands do.
  * Otherwise it is taken to reach them once the tracked points have covered this share of their
@@ -38,8 +47,12 @@ const KNEE_HEIGHT_SHARE_OF_RISE = 1 / 3;
  */
 const FLOOR_PULL_MIN_RISE_TORSOS = 0.5;
 
-/** Which points follow the bar for one rep. */
-export type BarTracker = 'hands' | 'shoulders';
+/**
+ * Which points follow the bar for one rep: the near plate's centre (the end of the bar, the
+ * most direct), the hands, or the shoulders (which only show how high the bar is, not where it
+ * is front to back).
+ */
+export type BarTracker = 'plate' | 'hands' | 'shoulders';
 
 /** What the deadlift checks share about one rep's pull, from the floor to lockout. */
 export interface Pull {
@@ -59,6 +72,8 @@ export interface Pull {
   readonly kneeHeight: number | null;
   /** The points that followed the bar in this rep. */
   readonly tracker: BarTracker;
+  /** Where those points were in each of `frames`, or null where they weren't seen. */
+  readonly barPoints: readonly (Vec2 | null)[];
   /** The tracked points' height with the bar on the floor (image y): their lowest before the rep. */
   readonly floorY: number;
 }
@@ -70,14 +85,36 @@ export function pullOf(context: RepContext): Pull | null {
     0,
     rep.startFrame - Math.round(FLOOR_LOOKBACK_SECONDS * sequence.sampleFps),
   );
-  const heightsOf = (names: readonly LandmarkName[]) =>
-    sequence.frames.map((frame) => averagePoint(frame, names)?.y ?? null);
-
-  const handsY = heightsOf(WRISTS);
-  const repHands = handsY.slice(rep.startFrame, rep.endFrame + 1);
-  const handsSeen = repHands.filter((y) => y !== null).length / Math.max(1, repHands.length);
-  const tracker: BarTracker = handsSeen >= HANDS_SEEN_SHARE ? 'hands' : 'shoulders';
-  const trackedY = tracker === 'hands' ? handsY : heightsOf(SHOULDERS);
+  const pointsOf = (names: readonly LandmarkName[]) =>
+    sequence.frames.map((frame) => averagePoint(frame, names));
+  const plate: readonly (Vec2 | null)[] = sequence.barTrack ?? sequence.frames.map(() => null);
+  const hands = pointsOf(WRISTS);
+  const shoulders = pointsOf(SHOULDERS);
+  /** How far some points rise from their lowest before the rep to their highest in it. */
+  const riseOf = (points: readonly (Vec2 | null)[]): number | null => {
+    const before = maxOf(points.slice(lookbackStart, rep.startFrame + 1).map((p) => p?.y ?? null));
+    const during = points.slice(rep.startFrame, rep.endFrame + 1).map((p) => p?.y ?? null);
+    const top = minOf(during);
+    return before === null || top === null ? null : before - top;
+  };
+  const shoulderRise = riseOf(shoulders);
+  const followsBar = (points: readonly (Vec2 | null)[]): boolean => {
+    const inRep = points.slice(rep.startFrame, rep.endFrame + 1);
+    const seen = inRep.filter((point) => point).length / Math.max(1, inRep.length);
+    if (seen < SEEN_SHARE) return false;
+    // Something round that never moved, such as a plate leaning on a wall, isn't the bar.
+    const rise = riseOf(points);
+    return (
+      rise !== null && (shoulderRise === null || rise >= MIN_RISE_SHARE_OF_SHOULDERS * shoulderRise)
+    );
+  };
+  const tracker: BarTracker = followsBar(plate)
+    ? 'plate'
+    : followsBar(hands)
+      ? 'hands'
+      : 'shoulders';
+  const trackedPoints = tracker === 'plate' ? plate : tracker === 'hands' ? hands : shoulders;
+  const trackedY = trackedPoints.map((point) => point?.y ?? null);
 
   const lookback = trackedY.slice(lookbackStart, rep.startFrame + 1);
   const floorY = maxOf(lookback);
@@ -88,7 +125,7 @@ export function pullOf(context: RepContext): Pull | null {
   };
 
   const lastOnFloor =
-    tracker === 'hands'
+    tracker !== 'shoulders'
       ? lastOnFloorBefore(rep.turnFrame, lookbackStart, riseAt)
       : lastOnFloorAfter(lookbackStart + lookback.indexOf(floorY), rep.turnFrame, riseAt);
   const frames: IndexedFrame[] = [];
@@ -97,7 +134,8 @@ export function pullOf(context: RepContext): Pull | null {
     if (frame) frames.push({ frame, index });
   }
   const first = frames[0];
-  const startBar = first && averagePoint(first.frame, tracker === 'hands' ? WRISTS : SHOULDERS);
+  const barPoints = frames.map(({ index }) => trackedPoints[index] ?? null);
+  const startBar = barPoints[0];
   const startHip = first && sidePoint(first.frame, nearSide, 'Hip');
   if (frames.length < 2 || !startBar || !startHip) return null;
 
@@ -108,10 +146,10 @@ export function pullOf(context: RepContext): Pull | null {
     frames.filter(({ frame }) => sidePoint(frame, nearSide, 'Knee') !== null).length /
     frames.length;
   const reachesKnees = (frame: PoseFrame, index: number): boolean => {
-    if (tracker === 'hands' && kneesSeen >= HANDS_SEEN_SHARE) {
-      const hands = averagePoint(frame, WRISTS);
+    if (tracker !== 'shoulders' && kneesSeen >= SEEN_SHARE) {
+      const bar = trackedPoints[index];
       const knee = sidePoint(frame, nearSide, 'Knee');
-      return hands !== null && knee !== null && hands.y <= knee.y;
+      return bar !== null && bar !== undefined && knee !== null && bar.y <= knee.y;
     }
     const rise = riseAt(index);
     return rise !== null && rise >= topRise * KNEE_HEIGHT_SHARE_OF_RISE;
@@ -126,12 +164,13 @@ export function pullOf(context: RepContext): Pull | null {
     liftoff,
     kneeHeight: kneeHeight < 0 ? null : kneeHeight,
     tracker,
+    barPoints,
     floorY,
   };
 }
 
 /**
- * Following the hands: the last frame on the floor, searching back from lockout. Searching
+ * Following the plate or the hands: the last frame on the floor, searching back from lockout. Searching
  * back skips a dip-and-rip setup, where the hips move but the bar stays down.
  */
 function lastOnFloorBefore(
@@ -164,6 +203,11 @@ function lastOnFloorAfter(
     last = index;
   }
   return -1;
+}
+
+function minOf(values: readonly (number | null)[]): number | null {
+  const seen = values.filter((value): value is number => value !== null);
+  return seen.length > 0 ? Math.min(...seen) : null;
 }
 
 function maxOf(values: readonly (number | null)[]): number | null {

@@ -25,8 +25,9 @@ document in the same pull request.
 
 - Live feedback while lifting.
 - Accounts, sync, or sharing.
-- Tracking the barbell itself. The pose model tracks the body only, so bar
-  position is approximated from the hands (see [Known limits](#known-limits)).
+- Detecting the barbell with a trained object model. The bar is followed through
+  the near plate, found as a circle (see [Following the bar](#following-the-bar)),
+  or the hands when the plate isn't found.
 
 ## How a clip becomes a report
 
@@ -75,6 +76,7 @@ src/
   signal/        Pure maths on time series: smoothing, gap filling, peaks.
   view/          Camera view detection from a pose sequence.
   reps/          Generic rep segmentation driven by a signal.
+  bar/           Follows the near plate (the bar's end) as a circle in the frame.
   lifts/         One folder per lift, plus the lift registry.
     registry.ts
     squat/
@@ -134,14 +136,15 @@ ui ──▶ analysis ──▶ view, reps, lifts ──▶ geometry ──▶ s
 | `view`                 | `geometry`, `signal`                                    |
 | `reps`                 | `geometry`, `signal`                                    |
 | `lifts`                | `geometry`, `signal` (and never another lift's folder)  |
+| `bar`                  | `geometry`, `signal`                                    |
 | `report`               | nothing                                                 |
 | `analysis`             | `geometry`, `signal`, `view`, `reps`, `lifts`, `report` |
 | `adapters`             | nothing                                                 |
 | `ui`                   | anything except `testing`                               |
 | `testing` (tests only) | nothing; only `*.test.ts` files may import it           |
 
-- `core`, `geometry`, `signal`, `view`, `reps`, `lifts`, `analysis` and `report`
-  are **pure TypeScript**. They don't touch the DOM, the camera, files or
+- `core`, `geometry`, `signal`, `view`, `reps`, `lifts`, `bar`, `analysis` and
+  `report` are **pure TypeScript**. They don't touch the DOM, the camera, files or
   storage. That makes them fast to unit test in Node with recorded fixtures.
 - Only `adapters` and `ui` touch browser APIs.
 - `analysis` receives adapters as arguments (dependency injection), so tests can
@@ -383,16 +386,17 @@ deadlift can be a little way off the floor, so the floor is the lowest point of
 whatever follows the bar in the second before the rep. The lifter faces the way
 that point is from the hips at the floor.
 
-What follows the bar is chosen per rep: the hands when they're seen in at least
-80% of the rep's frames, otherwise the shoulders. Filmed from the side, the near
-plate covers the hands (and the knees) for the whole pull; in the first real
-clip the hands were seen in 92 of 1,259 frames and the shoulders in all of them.
-With the hands, the floor frame is the last one near the floor searching back
+What follows the bar is chosen per rep: the near plate when the bar tracker found
+it in at least 80% of the rep's frames (see [Following the bar](#following-the-bar)),
+then the hands when they're seen in 80%, otherwise the shoulders. Filmed from the
+side, the near plate covers the hands (and the knees) for the whole pull; in the
+first real clip the hands were seen in 92 of 1,259 frames and the shoulders in
+all of them. With the plate or the hands, the floor frame is the last one near the floor searching back
 from lockout, which skips a dip-and-rip setup. With the shoulders, it is the
 frame before they first rise, searching forward, because hips shooting up keep
 the shoulders low after the bar has left the floor. The bar reaches the knees
-when the hands pass the knee point, if the hands are tracked and the knees are
-seen in 80% of the pull. Otherwise it counts as at the knees once the tracked
+when the plate's centre or the hands pass the knee point, if they are tracked and
+the knees are seen in 80% of the pull. Otherwise it counts as at the knees once the tracked
 point has covered a third of its rise to lockout, which is where the hands pass
 the knees in a conventional pull (later with the hips set higher, so this is an
 estimate). A pull whose
@@ -406,7 +410,7 @@ different times.
 | ----------------- | --------------------------------------------------------------------------- | ------------------------------------ | ---------- | -------- |
 | Hips rising first | How far the torso tips forward from liftoff until the bar reaches the knees | Up to 10°                            | 10° to 20° | Over 20° |
 | Lockout           | Bend left at the hip and knee at the top, whichever is worse                | Up to 10°                            | 10° to 20° | Over 20° |
-| Bar path          | How far the hands move forward from where they left the floor               | Up to 0.1 torso lengths (about 5 cm) | 0.1 to 0.2 | Over 0.2 |
+| Bar path          | How far the bar moves forward from where it left the floor                  | Up to 0.1 torso lengths (about 5 cm) | 0.1 to 0.2 | Over 0.2 |
 
 - **Hips rising first** measures from the moment the bar leaves the floor (lean
   steadied with a rolling median over ±0.1 s), and takes the most tipped moment
@@ -422,8 +426,10 @@ different times.
   leaning back at the top counts as locked out instead of as a hip that hasn't
   straightened. It takes the best moment within 0.25 s of where the bar was
   highest.
-- **Bar path** follows the hands, since the bar is in them, and skips reps where
-  they were hidden. Moving back towards
+- **Bar path** follows the plate's centre, or the hands where the plate wasn't
+  found, and skips reps where neither was followed. Positions are steadied with a
+  median over 2 frames either side, so one misplaced frame can't fail a rep.
+  Moving back towards
   the body as the knees straighten is normal and isn't counted. With the camera
   off square-on, forward drift is foreshortened, so it can be under-reported but
   never over-reported.
@@ -603,6 +609,48 @@ settings are in `vite.config.ts`.
   and lays the result's message over the video. It clears once playback moves
   off that frame.
 
+## Following the bar
+
+The pose model sees the body only, and from the side the near plate hides the
+hands. So for lifts that set `followsBar` (the deadlift), the plate itself is
+followed while the poses are found: `extractPoses` takes a `trackBar` callback,
+and the results become `PoseSequence.barTrack`, one `BarPoint` (centre, radius,
+confidence) or null per frame. Frames are read through the `RegionReader` port,
+which returns a small greyscale picture of part of the frame
+(`adapters/video/CanvasRegionReader` draws the video into a canvas). Everything
+else is pure, in `src/bar/`.
+
+- **Finding a circle** (`find-circle.ts`): Sobel edges vote for the points one
+  radius away along their gradient, on both sides, since a plate can be darker or
+  lighter than what's behind it. The centre with the most votes per unit of
+  circumference wins. Its score is measured directly, as the share of 72 points
+  around the circle with an edge facing the centre within 2 pixels.
+- **Finding the plate the first time** (`plate-tracker.ts`): around the middle of
+  the feet, its centre about 0.4 torso lengths above the ankles, at radii of 0.3
+  to 1.3 torso lengths. A 45 cm plate is about 0.45 from a few metres away, but
+  it is nearer the camera than the lifter, so it looks bigger when the camera is
+  close: 0.85 in Reagan's first gym clip, filmed from about 1.5 m at floor level.
+  With the range capped at 0.6 that clip locked onto a kettlebell instead. It needs 65% of the edge,
+  in the same place three frames in a row, because curves such as a bent leg can
+  look like part of a circle.
+- **Following it**: each frame looks within 0.3 torso lengths of where it was
+  (widening by 0.1 per missed frame), for a circle within 15% of the size it was
+  first found at, with at least 30% of the edge. After 15 missed frames in a row
+  (0.5 s) it starts again from the feet. Missed frames are null, never guessed.
+- Pictures are read at a scale that makes the plate about 24 pixels in radius,
+  so each frame's search is small next to the pose model's.
+- The results video draws the plate's outline and the last 3 s of its path, so
+  what the tracker found can be checked by eye.
+- On a made-up clip (the sample photo with a plate drawn on, rising 200 px and
+  drifting 40 px) it followed the plate in 178 of 181 frames, within 3 px.
+- On Reagan's first gym clip (27 s, iPhone, side-on from floor level) it found
+  the plate after 8 frames and followed it in every frame after, through the
+  lift and lockout, at about 4 ms a frame in Node.
+- `pullOf` only takes the plate (or the hands) as the bar if it rises at least
+  half as much as the shoulders over the rep. A round thing that stays put, such
+  as a plate leaning on a wall, falls back to the shoulders, so a wrong lock can
+  cost bar path but never the other checks.
+
 ## Known limits
 
 - **Bench press is the hardest lift to track.** The lifter is lying down and the
@@ -610,12 +658,14 @@ settings are in `vite.config.ts`.
   than squat and deadlift checks, and skip more often. The model was trained
   mostly on people standing, so its left and right labels for a lifter lying
   down are least sure.
-- **The bar isn't tracked directly.** Bar path is approximated from the hands. A
-  later version could add a small object detector for the plate.
+- **The bar is found as a circle, not recognised.** The plate tracker looks for
+  the clearest circle of plate size near the feet, so a round shape there of the
+  same size could be mistaken for it, and a plate that blends into the background
+  may not be found. It has been tested on made-up video only so far.
 - **Side-view deadlifts hide the hands.** Filmed straight side-on, the near plate
   sits between the camera and the hands at any practical camera height, so bar
-  path is usually skipped. The other deadlift checks use the shoulders, hips and
-  knees, which stay in view. Turning the camera to show the hands would distort
+  path relies on the plate tracker. The other deadlift checks use the shoulders,
+  hips and knees, which stay in view. Turning the camera to show the hands would distort
   the hip and knee angles, so the deadlift filming tips say to stay side-on.
 - **Depth (`z`) from the model is an estimate.** Checks rely on `x` and `y` and
   treat `z` as a hint only.

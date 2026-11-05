@@ -67,6 +67,44 @@ describe('pullOf', () => {
       const pull = pullOf(hidden());
       expect(pull?.kneeHeight).toBeGreaterThan(pull?.liftoff ?? 0);
     });
+
+    describe('and the plate followed', () => {
+      /** The plate's centre where the hands would be, as the bar tracker reports it. */
+      const withPlate = () => {
+        const context = hidden();
+        const barTrack = sideDeadliftRep().sequence.frames.map((frame) => {
+          const wrist = frame.landmarks?.[LANDMARK.leftWrist];
+          return wrist ? { x: wrist.x, y: wrist.y, radius: 0.11, confidence: 0.9 } : null;
+        });
+        return { ...context, sequence: { ...context.sequence, barTrack } };
+      };
+
+      it('follows the bar with the plate', () => {
+        expect(pullOf(withPlate())?.tracker).toBe('plate');
+      });
+
+      it('ignores a round thing that never moves, such as a plate leaning on a wall', () => {
+        const context = hidden();
+        const barTrack = context.sequence.frames.map(() => ({
+          x: 0.4,
+          y: 0.85,
+          radius: 0.11,
+          confidence: 0.9,
+        }));
+        const stationary = { ...context, sequence: { ...context.sequence, barTrack } };
+        const pull = pullOf(stationary);
+        expect(pull?.tracker).toBe('shoulders');
+        expect(pull?.frames[0]?.index).toBe(pullOf(hidden())?.frames[0]?.index);
+      });
+
+      it('finds the same floor, liftoff and knee height as the hands would', () => {
+        const fromPlate = pullOf(withPlate());
+        const fromHands = pullOf(sideDeadliftRep());
+        expect(fromPlate?.frames[0]?.index).toBe(fromHands?.frames[0]?.index);
+        expect(fromPlate?.kneeHeight).toBe(fromHands?.kneeHeight);
+        expect(fromPlate?.facing).toBe(1);
+      });
+    });
   });
 });
 
