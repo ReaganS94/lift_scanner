@@ -656,6 +656,13 @@ else is pure, in `src/bar/`.
   half as much as the shoulders over the rep. A round thing that stays put, such
   as a plate leaning on a wall, falls back to the shoulders, so a wrong lock can
   cost bar path but never the other checks.
+- It also needs a median confidence of at least 0.7 over the rep. Straight
+  side-on the plate is a clean circle (median 0.83 on that clip). On a clip
+  filmed about 35° off side-on the plate is an oval, and the tracker settled on
+  part of it while still rising with the bar (median 0.49), which would have
+  placed the bar wrongly. There the hands are in view, so they follow the bar
+  instead. On a clip filmed along the bar, it found the far plate face-on, which
+  never moved, so the rise guard rejected it.
 
 ## Known limits
 

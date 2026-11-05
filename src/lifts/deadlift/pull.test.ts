@@ -83,6 +83,15 @@ describe('pullOf', () => {
         expect(pullOf(withPlate())?.tracker).toBe('plate');
       });
 
+      it("doesn't trust a plate found only in part, as when filmed at an angle", () => {
+        const context = withPlate();
+        const barTrack = context.sequence.barTrack.map(
+          (point) => point && { ...point, confidence: 0.6 },
+        );
+        const angled = { ...context, sequence: { ...context.sequence, barTrack } };
+        expect(pullOf(angled)?.tracker).toBe('shoulders');
+      });
+
       it('ignores a round thing that never moves, such as a plate leaning on a wall', () => {
         const context = hidden();
         const barTrack = context.sequence.frames.map(() => ({
