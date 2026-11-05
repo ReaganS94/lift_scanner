@@ -15,4 +15,9 @@ export const deadlift: LiftDefinition = {
     minDurationSeconds: 0.8,
   },
   checks: [hipsRiseFirst, lockout, barPath],
+  filmingTips: [
+    'From straight side-on the near plate hides your hands. That’s expected: reps, hips rising first and lockout use your shoulders, hips and knees instead.',
+    'Filming closer, higher or with the 0.5× lens won’t uncover your hands. Use the 1× lens about 3 m away, so the edges of the picture don’t bend.',
+    'Don’t turn the camera to see your hands. At an angle, hip and knee angles look squashed and lockout can’t be judged.',
+  ],
 };
