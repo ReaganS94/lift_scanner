@@ -16,6 +16,8 @@ export function ChooseClip({ onStart }: ChooseClipProps) {
     return last && lifts.some((lift) => lift.id === last) ? last : (lifts[0]?.id ?? '');
   });
   const [file, setFile] = useState<File | null>(null);
+  const chosenLift = lifts.find((lift) => lift.id === liftId);
+  const liftTips = chosenLift?.filmingTips ?? [];
 
   const submit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -98,6 +100,16 @@ export function ChooseClip({ onStart }: ChooseClipProps) {
           </li>
           <li>Start recording before your first rep and stop after your last.</li>
         </ul>
+        {chosenLift && liftTips.length > 0 && (
+          <>
+            <p className="tips-heading">{chosenLift.name}</p>
+            <ul>
+              {liftTips.map((tip) => (
+                <li key={tip}>{tip}</li>
+              ))}
+            </ul>
+          </>
+        )}
       </details>
 
       <button type="submit" className="primary" disabled={!file}>

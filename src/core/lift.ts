@@ -21,4 +21,6 @@ export interface LiftDefinition {
   repSignal(clip: ClipContext): (number | null)[];
   readonly repDetection: RepDetectionOptions;
   readonly checks: readonly FormCheck[];
+  /** Filming advice for this lift, shown after the general tips. Each entry is one sentence or two. */
+  readonly filmingTips?: readonly string[];
 }
