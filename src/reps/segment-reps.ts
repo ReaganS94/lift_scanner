@@ -36,6 +36,9 @@ export const FINAL_REP_RETURN = 0.5;
  * rest. It ends at its lowest point after the peak. A clip cut off at or near the top of a rep
  * still doesn't count it.
  *
+ * Finally, when the lift sets minShareOfBiggestRep, reps much smaller than the set's biggest are
+ * dropped.
+ *
  * Frame indices refer to the signal, one value per frame of the clip.
  */
 export function segmentReps(
@@ -98,7 +101,16 @@ export function segmentReps(
     addRep(last.startFrame, last.dip.frame);
   }
 
-  return reps;
+  const minShare = options.minShareOfBiggestRep;
+  return minShare === undefined ? reps : withoutSmallReps(reps, signal, minShare);
+}
+
+function withoutSmallReps(reps: readonly Rep[], signal: Series, minShare: number): Rep[] {
+  const peakOf = (rep: Rep) => signal[rep.turnFrame] ?? 0;
+  const biggest = Math.max(0, ...reps.map(peakOf));
+  return reps
+    .filter((rep) => peakOf(rep) >= minShare * biggest)
+    .map((rep, index) => ({ ...rep, index }));
 }
 
 /** A rep that has started but not yet ended. */

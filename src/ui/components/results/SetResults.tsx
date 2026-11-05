@@ -122,7 +122,7 @@ export function SetResults({
       />
       {summaryText(summary) && <p className="verdict">{summaryText(summary)}</p>}
       <p className="muted">
-        {viewLabel(report.view)} view.{' '}
+        {viewLabel(report.view)} view{angleNote(report.correctedForDegrees)}.{' '}
         <button type="button" className="link" onClick={onChangeView}>
           Change
         </button>
@@ -250,4 +250,15 @@ function summaryText({ pass, warn, fail }: ReportSummary): string | null {
   if (fail > 0) parts.push(`${String(fail)} ${fail === 1 ? 'fail' : 'fails'}`);
   if (warn > 0) parts.push(`${String(warn)} ${warn === 1 ? 'warning' : 'warnings'}`);
   return `${parts.join(' and ')} across the set.`;
+}
+
+/**
+ * Side-on clips read about 10° off from body proportions alone, so smaller corrections aren't
+ * worth mentioning.
+ */
+const MENTION_ANGLE_FROM_DEGREES = 20;
+
+function angleNote(degrees: number | undefined): string {
+  if (degrees === undefined || degrees < MENTION_ANGLE_FROM_DEGREES) return '';
+  return `, about ${String(Math.round(degrees))}° off side-on (angles corrected for it)`;
 }

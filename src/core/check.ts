@@ -47,6 +47,12 @@ export interface ClipContext {
    * side is partly hidden and its points are guesses.
    */
   readonly nearSide: BodySide;
+  /**
+   * Roughly how far the camera was turned away from side-on, in degrees (0 is side-on). For a
+   * side view the analysis corrects the sequence for it before any check runs, so checks
+   * needn't. Absent when unknown.
+   */
+  readonly angleFromSide?: number;
 }
 
 /** Everything a check gets to look at for a single rep. Read its frames from rep.startFrame to rep.endFrame. */

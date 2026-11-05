@@ -293,6 +293,15 @@ therefore counts if, after its peak, the signal came at least halfway back to
 rest, and it ends at its lowest point after the peak. A clip cut off at or near
 the top of a rep still doesn't count it.
 
+Finally, a lift can require each rep to travel a share of the set's biggest rep
+(`minShareOfBiggestRep`). The bench press asks for 40%. Filmed at an angle the
+torso can look short, which inflates every distance measured in torso lengths,
+the model's wobble included: a bench clip filmed from low near the feet had two
+full reps of 1.5 and 1.7 torso lengths and five wobbles of 0.3 to 0.6 that
+passed the fixed minimum. A single rep is always the set's biggest, so a heavy
+single is still found. Squat and deadlift don't use it, because a squat cut
+well short is exactly what the depth check should report.
+
 ## Adding a new lift
 
 1. Create `src/lifts/<lift-name>/index.ts` exporting a `LiftDefinition`.
@@ -313,12 +322,25 @@ supports:
 | ------------ | --------------------------------------------------------------- |
 | Side         | Squat depth, torso angle, bar path, hip vs shoulder rise timing |
 | Front / back | Knees caving in, left/right imbalance, stance and grip width    |
-| ~45°         | Not supported. Most measurements are distorted.                 |
+| 45° to 60°   | Not supported. Most measurements are distorted.                 |
 
 View detection compares apparent shoulder width to torso length. Shoulder width
 shrinks with the cosine of the camera's angle off square-on (about 0.8 of torso
-length when facing the camera), so the cut-offs accept up to 30° off square-on
-and return no guess in between. It measures only frames where the torso looks
+length when facing the camera), which also gives a rough angle off side-on
+(`ViewGuess.angleFromSide`; straight side-on clips read about 10°). A side view
+is accepted up to 45° off side-on and a front or back view up to 30° off
+square-on, with no guess in between.
+
+An angled side view squashes every distance along the lift's front-to-back
+direction to cos(angle) in the image, while heights stay true, so hip, knee and
+lean angles read smaller than they are (a 20° hip bend reads 15° from 40° off).
+Before any check runs, `analysis/correct-for-camera-angle` stretches each frame
+sideways about the hips by 1 / cos(angle), capped at 45°, and the results screen
+says so when the angle is 20° or more. The overlay still draws the uncorrected
+poses. Tested on real clips (2026-11-05), MediaPipe's 3D world landmarks were
+not a better fix: they read 5 to 20° more bent at lockout, take phone tilt for
+torso lean, and still can't see knees behind plates. The heavy model was no
+steadier on angled bench clips. It measures only frames where the torso looks
 full length, because leaning towards the camera shortens the torso and would
 skew the ratio. It runs on the raw poses, before cleanup drops the faint far
 side of a side view. Front and back are told apart by whether the face is

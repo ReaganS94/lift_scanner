@@ -118,6 +118,9 @@ export function useAnalysisFlow<TImage>(adapters: AnalysisAdapters<TImage>) {
           view,
           torsoLength: prepared.torsoLength,
           nearSide: prepared.nearSide,
+          ...(prepared.viewGuess.angleFromSide === null
+            ? {}
+            : { angleFromSide: prepared.viewGuess.angleFromSide }),
         },
         lift,
       );
