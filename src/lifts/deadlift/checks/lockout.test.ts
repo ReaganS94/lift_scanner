@@ -61,7 +61,7 @@ describe('deadlift lockout', () => {
     });
     expect(lockout.evaluate(context)).toMatchObject({
       status: 'pass',
-      message: 'Hips locked out. Your knees were behind the plate, so only the hips were checked.',
+      message: 'Hips locked out. Your knees weren’t seen clearly, so only the hips were checked.',
     });
   });
 
@@ -78,9 +78,13 @@ describe('deadlift lockout', () => {
             i === LANDMARK.leftKnee ? { ...landmark, x: landmark.x + kneeShift } : landmark,
           ) ?? null,
       }));
+      // The plate rides on the hands, as on the bar, but drawn large enough to cover the knee.
       const barTrack = context.sequence.frames.map((frame) => {
         const knee = frame.landmarks?.[LANDMARK.leftKnee];
-        return knee ? { x: knee.x, y: knee.y, radius: 0.11, confidence: 0.9 } : null;
+        const wrist = frame.landmarks?.[LANDMARK.leftWrist];
+        if (!knee || !wrist) return null;
+        const radius = Math.hypot(knee.x - wrist.x, knee.y - wrist.y) + 0.02;
+        return { x: wrist.x, y: wrist.y, radius, confidence: 0.9 };
       });
       return { ...context, sequence: { ...context.sequence, frames, barTrack } };
     }

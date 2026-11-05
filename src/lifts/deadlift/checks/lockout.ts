@@ -37,7 +37,9 @@ export const lockout: FormCheck = {
     let best: (Bends & { frameIndex: number }) | null = null;
     for (const { frame, index } of repFrames(context)) {
       if (Math.abs(index - context.rep.turnFrame) > window) continue;
-      const bends = bendsAt(frame, context, pull.facing, context.sequence.barTrack?.[index]);
+      // The plate only counts when the pull trusted it as the bar, not a round thing nearby.
+      const plate = pull.tracker === 'plate' ? context.sequence.barTrack?.[index] : null;
+      const bends = bendsAt(frame, context, pull.facing, plate);
       if (!bends) continue;
       // Measuring both joints beats measuring only the hips; then the least bent moment wins.
       const better =
@@ -53,7 +55,11 @@ export const lockout: FormCheck = {
     const worst = Math.max(hips, knees ?? 0);
     const measured = { checkId: ID, value: worstOf(best), frameIndex: best.frameIndex };
     const kneesNote =
-      knees === null ? ' Your knees were behind the plate, so only the hips were checked.' : '';
+      best.kneeHidden === 'plate'
+        ? ' Your knees were behind the plate, so only the hips were checked.'
+        : best.kneeHidden === 'unseen'
+          ? ' Your knees weren’t seen clearly, so only the hips were checked.'
+          : '';
     if (worst <= PASS_UP_TO_DEGREES) {
       return {
         ...measured,
@@ -73,6 +79,8 @@ interface Bends {
   readonly hips: number;
   /** Null when the knee was hidden, so it wasn't measured. */
   readonly knees: number | null;
+  /** Why the knee wasn't measured, or null when it was. */
+  readonly kneeHidden: 'plate' | 'unseen' | null;
 }
 
 function worstOf(bends: Bends): number {
@@ -97,14 +105,15 @@ function bendsAt(
   if (!hip || !ankle || torso === null) return null;
 
   const knee = sidePoint(frame, context.nearSide, 'Knee');
-  if (!knee || hiddenByPlate(knee, plate)) {
+  const kneeHidden = !knee ? 'unseen' : hiddenByPlate(knee, plate) ? 'plate' : null;
+  if (!knee || kneeHidden) {
     const leg = forwardTilt(hip, ankle, facing);
-    return leg === null ? null : { hips: torso + leg, knees: null };
+    return leg === null ? null : { hips: torso + leg, knees: null, kneeHidden };
   }
   const thigh = forwardTilt(hip, knee, facing);
   const shin = forwardTilt(knee, ankle, facing);
   if (thigh === null || shin === null) return null;
-  return { hips: torso + thigh, knees: thigh - shin };
+  return { hips: torso + thigh, knees: thigh - shin, kneeHidden: null };
 }
 
 function shortfallMessage(hips: number, knees: number | null): string {
