@@ -65,7 +65,7 @@ const TRACK_RADIUS_TOLERANCE = 0.15;
 /** Less of the edge than this and the frame counts as missed: motion blur or something in front. */
 const TRACK_MIN_SCORE = 0.3;
 /** After this many missed frames in a row the plate is looked for afresh, as at the start. */
-const MAX_MISSES = 15;
+export const MAX_MISSES = 15;
 /** Torso lengths are steadied with a median over this many recent frames. */
 const TORSO_HISTORY = 15;
 
