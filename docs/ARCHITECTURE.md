@@ -126,7 +126,7 @@ Arrows point from a module to what it may import. Every layer may also import
 `core`.
 
 ```
-ui ──▶ analysis ──▶ view, reps, lifts ──▶ geometry ──▶ signal ──▶ core
+ui ──▶ analysis ──▶ view, reps, lifts ──▶ bar ──▶ geometry ──▶ signal ──▶ core
  │         └──────▶ report ─────────────────────────────────────────▲
  └──▶ adapters ─────────────────────────────────────────────────────┘
 ```
@@ -138,7 +138,7 @@ ui ──▶ analysis ──▶ view, reps, lifts ──▶ geometry ──▶ s
 | `signal`               | nothing                                                           |
 | `view`                 | `geometry`, `signal`                                              |
 | `reps`                 | `geometry`, `signal`                                              |
-| `lifts`                | `geometry`, `signal` (and never another lift's folder)            |
+| `lifts`                | `geometry`, `signal`, `bar` (and never another lift's folder)     |
 | `bar`                  | `geometry`, `signal`                                              |
 | `people`               | `signal`                                                          |
 | `report`               | nothing                                                           |
@@ -431,8 +431,9 @@ different times.
   straightened. It takes the best moment within 0.25 s of where the bar was
   highest. From the side the near plate covers the knees at the top, and the
   model still places the knee, often confidently and wrongly (Reagan's first gym
-  clip read 32° of knee bend on straight legs). So a knee inside the tracked
-  plate's circle, or not seen, isn't judged: the hips are then measured against
+  clip read 32° of knee bend on straight legs). So a knee inside the circle of a
+  trusted plate (`trustedPlates`, even one not found for enough of the rep to
+  follow the bar), or not seen, isn't judged: the hips are then measured against
   the hip-to-ankle line, which is the thigh's line when the knee is straight, and
   the message says only the hips were checked. With the knee slightly bent the
   hip-to-ankle line leans less than the thigh, so the hips read a little lenient.

@@ -16,7 +16,7 @@ const LAYERS = {
   signal: [],
   view: ['geometry', 'signal'],
   reps: ['geometry', 'signal'],
-  lifts: ['geometry', 'signal'],
+  lifts: ['geometry', 'signal', 'bar'],
   bar: ['geometry', 'signal'],
   people: ['signal'],
   report: [],

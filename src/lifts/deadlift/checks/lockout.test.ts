@@ -70,7 +70,11 @@ describe('deadlift lockout', () => {
      * The plate's centre on the near knee at every frame, as at lockout from the side, with the
      * knee guessed `kneeShift` frame heights forward of where it is, as if bent.
      */
-    function plateOverKnees(context: RepContext, kneeShift = 0.04): RepContext {
+    function plateOverKnees(
+      context: RepContext,
+      kneeShift = 0.04,
+      plate: { confidence?: number; fromFrame?: number } = {},
+    ): RepContext {
       const frames = context.sequence.frames.map((frame) => ({
         ...frame,
         landmarks:
@@ -79,12 +83,12 @@ describe('deadlift lockout', () => {
           ) ?? null,
       }));
       // The plate rides on the hands, as on the bar, but drawn large enough to cover the knee.
-      const barTrack = context.sequence.frames.map((frame) => {
+      const barTrack = context.sequence.frames.map((frame, index) => {
         const knee = frame.landmarks?.[LANDMARK.leftKnee];
         const wrist = frame.landmarks?.[LANDMARK.leftWrist];
-        if (!knee || !wrist) return null;
+        if (!knee || !wrist || index < (plate.fromFrame ?? 0)) return null;
         const radius = Math.hypot(knee.x - wrist.x, knee.y - wrist.y) + 0.02;
-        return { x: wrist.x, y: wrist.y, radius, confidence: 0.9 };
+        return { x: wrist.x, y: wrist.y, radius, confidence: plate.confidence ?? 0.9 };
       });
       return { ...context, sequence: { ...context.sequence, frames, barTrack } };
     }
@@ -100,6 +104,21 @@ describe('deadlift lockout', () => {
         message:
           'Hips locked out. Your knees were behind the plate, so only the hips were checked.',
       });
+    });
+
+    it('trusts a plate only found near the top, too few frames to follow the bar', () => {
+      // As on a clip filmed at an angle, where the plate was found from halfway up.
+      const context = plateOverKnees(sideDeadliftRep(), 0.04, { fromFrame: 30 });
+      expect(lockout.evaluate(context)).toMatchObject({
+        status: 'pass',
+        message:
+          'Hips locked out. Your knees were behind the plate, so only the hips were checked.',
+      });
+    });
+
+    it('still judges the knees behind a plate the tracker was unsure of', () => {
+      const context = plateOverKnees(sideDeadliftRep(), 0.04, { confidence: 0.5 });
+      expect(lockout.evaluate(context)).toMatchObject({ status: 'fail' });
     });
 
     it('still catches hips short of lockout, measured to the ankle', () => {
