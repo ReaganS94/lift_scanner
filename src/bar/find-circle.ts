@@ -14,6 +14,12 @@ export interface Circle {
 export interface CircleSearch {
   readonly minRadius: number;
   readonly maxRadius: number;
+  /**
+   * When set, the largest circle with at least this score is taken instead of the clearest. Two
+   * plates of the same size look different sizes: the nearer one bigger. Its edge can be less
+   * clear than the far plate's (hands and legs cross it), but it is the one wanted.
+   */
+  readonly largestWithScore?: number;
 }
 
 /**
@@ -46,7 +52,8 @@ interface Edges {
 }
 
 /**
- * The clearest circle of the given sizes in a picture, or null if there are no edges at all.
+ * The clearest circle of the given sizes in a picture (or the largest clear one, see
+ * CircleSearch.largestWithScore), or null if there are no edges at all.
  *
  * Every edge pixel votes for the points one radius away along its brightness gradient, on both
  * sides, since a plate can be darker or lighter than what's behind it. The point with the most
@@ -60,16 +67,54 @@ export function findCircle(image: GrayImage, search: CircleSearch): Circle | nul
 
   const minRadius = Math.max(2, Math.ceil(search.minRadius));
   const maxRadius = Math.max(minRadius, Math.floor(search.maxRadius));
-  let best: { x: number; y: number; radius: number; votes: number } | null = null;
+  const peaks: Peak[] = [];
   for (let radius = minRadius; radius <= maxRadius; radius++) {
     const peak = strongestCentre(edges, radius);
-    if (!peak) continue;
-    const votes = peak.votes / radius;
-    if (!best || votes > best.votes) best = { ...peak, radius, votes };
+    if (peak) peaks.push({ ...peak, radius, votes: peak.votes / radius });
   }
-  if (!best) return null;
+  const clearest = mostVoted(peaks);
+  if (!clearest) return null;
 
-  return { x: best.x, y: best.y, radius: best.radius, score: coverage(edges, best) };
+  if (search.largestWithScore !== undefined) {
+    const largest = largestClear(edges, peaks, search.largestWithScore);
+    if (largest) return largest;
+  }
+  return { ...clearest, score: coverage(edges, clearest) };
+}
+
+/** A candidate centre for one radius, with its votes per unit of circumference. */
+interface Peak {
+  readonly x: number;
+  readonly y: number;
+  readonly radius: number;
+  readonly votes: number;
+}
+
+/** Peaks this close together, as a share of the radius, are taken as the same circle. */
+const SAME_CIRCLE_SHARE = 0.25;
+
+function mostVoted<T extends Peak>(peaks: readonly T[]): T | null {
+  let best: T | null = null;
+  for (const peak of peaks) if (!best || peak.votes > best.votes) best = peak;
+  return best;
+}
+
+/**
+ * The largest circle with at least `minScore` of its edge found. Radii a pixel or two off the
+ * true one still score well, so once the largest is known, the clearest peak around the same
+ * centre gives its size.
+ */
+function largestClear(edges: Edges, peaks: readonly Peak[], minScore: number): Circle | null {
+  const scored = peaks.map((peak) => ({ ...peak, score: coverage(edges, peak) }));
+  const clear = scored.filter((peak) => peak.score >= minScore);
+  const largest = clear[clear.length - 1];
+  if (!largest) return null;
+  const same = clear.filter(
+    (peak) =>
+      Math.hypot(peak.x - largest.x, peak.y - largest.y) <= SAME_CIRCLE_SHARE * largest.radius,
+  );
+  const best = mostVoted(same) ?? largest;
+  return { x: best.x, y: best.y, radius: best.radius, score: best.score };
 }
 
 function findEdges(image: GrayImage): Edges {

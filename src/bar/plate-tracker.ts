@@ -32,11 +32,18 @@ const SEED_EXPECTED_RADIUS_TORSOS = 0.6;
  * Where to look for the plate the first time, around the middle of the feet: the bar sits over
  * the middle of the foot, its centre a plate's radius above the floor, a little above the
  * ankles. Generous, since the plate's size depends on the camera, and so that a bar set down a
- * little ahead or behind is still found.
+ * little ahead or behind is still found. It reaches well below the ankles too: filmed from an
+ * angle the near plate is between the camera and the feet, so it shows lower in the frame (about
+ * 0.9 torso lengths below the ankles on a clip filmed about 35° off side-on).
  */
-const SEED_ABOVE_ANKLE_TORSOS = 0.4;
+const SEED_ABOVE_ANKLE_TORSOS = 1.4;
+const SEED_BELOW_ANKLE_TORSOS = 1.8;
 const SEED_HALF_WIDTH_TORSOS = 1.3;
-const SEED_HALF_HEIGHT_TORSOS = 1;
+/**
+ * The plate hides the ankles in many frames. Then they are taken to be this far below the
+ * knees: the shin is about as long as the torso, a little shorter.
+ */
+const SHIN_TORSOS = 0.8;
 /**
  * At least this much of the plate's edge must be seen to take it as the plate the first time.
  * High, because curved outlines such as a bent leg can look like part of a circle.
@@ -96,19 +103,21 @@ export function createPlateTracker(aspectRatio: number): PlateTracker {
   };
 
   const seed = (pose: PoseFrame, torso: number, read: ReadRegion): BarPoint | null => {
-    const feet = feetOf(pose);
+    const feet = feetOf(pose, torso);
     if (!feet) {
       seeds = [];
       return null;
     }
-    const centre = { x: (feet.left + feet.right) / 2, y: feet.y - SEED_ABOVE_ANKLE_TORSOS * torso };
+    const top = feet.y - SEED_ABOVE_ANKLE_TORSOS * torso;
+    const bottom = feet.y + SEED_BELOW_ANKLE_TORSOS * torso;
     const found = search(read, aspectRatio, {
-      centre,
+      centre: { x: (feet.left + feet.right) / 2, y: (top + bottom) / 2 },
       halfWidth: (feet.right - feet.left) / 2 + SEED_HALF_WIDTH_TORSOS * torso,
-      halfHeight: SEED_HALF_HEIGHT_TORSOS * torso,
+      halfHeight: (bottom - top) / 2,
       expectedRadius: SEED_EXPECTED_RADIUS_TORSOS * torso,
       minRadius: SEED_MIN_RADIUS_TORSOS * torso,
       maxRadius: SEED_MAX_RADIUS_TORSOS * torso,
+      largestWithScore: SEED_MIN_SCORE,
     });
     if (!found || found.confidence < SEED_MIN_SCORE) {
       seeds = [];
@@ -177,6 +186,8 @@ interface Search {
   readonly expectedRadius: number;
   readonly minRadius: number;
   readonly maxRadius: number;
+  /** See CircleSearch. */
+  readonly largestWithScore?: number;
 }
 
 /** Looks for the plate in one region of the frame. Sizes are in the shared unit. */
@@ -200,6 +211,7 @@ function search(read: ReadRegion, aspectRatio: number, request: Search): BarPoin
   const circle: Circle | null = findCircle(image, {
     minRadius: request.minRadius * scale,
     maxRadius: request.maxRadius * scale,
+    ...(request.largestWithScore !== undefined && { largestWithScore: request.largestWithScore }),
   });
   if (!circle) return null;
   // Pixel n covers n to n + 1, so its centre is half a pixel in.
@@ -223,20 +235,27 @@ function clampToFrame(region: FrameRegion, aspectRatio: number): FrameRegion | n
 /**
  * How far the feet reach across the frame, from the middles of whichever feet are seen (each
  * from its ankle and toes, or the ankle alone), and the ankles' height. In a side view the two
- * feet overlap; from an angle the bar sits between them. Null if no ankle is seen.
+ * feet overlap; from an angle the bar sits between them. When no ankle is seen, as when the
+ * plate hides them, the knees stand in, a shin's length higher. Null if neither is seen.
  */
-function feetOf(pose: PoseFrame): { left: number; right: number; y: number } | null {
-  const sides: readonly [LandmarkName, LandmarkName][] = [
-    ['leftAnkle', 'leftFootIndex'],
-    ['rightAnkle', 'rightFootIndex'],
+function feetOf(pose: PoseFrame, torso: number): { left: number; right: number; y: number } | null {
+  const sides: readonly [LandmarkName, LandmarkName, LandmarkName][] = [
+    ['leftAnkle', 'leftFootIndex', 'leftKnee'],
+    ['rightAnkle', 'rightFootIndex', 'rightKnee'],
   ];
-  const middles: { x: number; y: number }[] = [];
-  for (const [ankleName, toesName] of sides) {
+  const fromAnkles: { x: number; y: number }[] = [];
+  const fromKnees: { x: number; y: number }[] = [];
+  for (const [ankleName, toesName, kneeName] of sides) {
     const ankle = pointAt(pose, ankleName);
-    if (!ankle) continue;
-    const toes = pointAt(pose, toesName);
-    middles.push({ x: toes ? (ankle.x + toes.x) / 2 : ankle.x, y: ankle.y });
+    const knee = pointAt(pose, kneeName);
+    if (ankle) {
+      const toes = pointAt(pose, toesName);
+      fromAnkles.push({ x: toes ? (ankle.x + toes.x) / 2 : ankle.x, y: ankle.y });
+    } else if (knee) {
+      fromKnees.push({ x: knee.x, y: knee.y + SHIN_TORSOS * torso });
+    }
   }
+  const middles = fromAnkles.length > 0 ? fromAnkles : fromKnees;
   if (middles.length === 0) return null;
   const xs = middles.map((middle) => middle.x);
   return {
