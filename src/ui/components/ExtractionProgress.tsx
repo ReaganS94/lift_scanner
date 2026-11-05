@@ -42,7 +42,7 @@ export function ExtractionProgress({ progress, livePose, onCancel }: ExtractionP
       <LiveSkeleton livePose={livePose} />
       <progress max={100} value={percent} aria-label="Analysis progress" />
       <p className="muted progress-times">
-        <span>{formatDuration((now - startedAt) / 1000)} so far</span>
+        <span>{formatDuration((now - startedAt) / 1000)}</span>
         {remaining !== null && <span>About {formatDuration(remaining)} left</span>}
       </p>
       <p className="muted">
