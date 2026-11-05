@@ -1,7 +1,7 @@
 {
   "name": "lift-scanner",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "description": "Review squat, deadlift and bench press form from a phone video, entirely on device.",
   "scripts": {

@@ -577,6 +577,14 @@ settings are in `vite.config.ts`.
   into view, and `ui/components/UpdateNotice` offers a reload. It never reloads by
   itself, because that would lose an analysis in progress. "Later" hides the
   notice until the app is next opened.
+- **Version number.** The start screen shows a release number such as
+  `v0.1.3 · 9eb18b5`, so it's easy to see when the phone has picked up a new
+  deploy. `scripts/app-version.ts` works it out at build time: the last number
+  is the base version in `package.json` plus the commits on main since that
+  version line last changed (one per merged PR, counted with `--first-parent`).
+  To start a new series, change the version in `package.json`, for example to
+  `0.2.0`. Nothing is committed back to main, and CI checks out the full history
+  so the count is right.
 - **The model's URL names its version**, so the stored copy is used without
   checking for a newer one. A new model means a new URL, which is downloaded
   afresh.

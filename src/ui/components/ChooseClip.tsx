@@ -2,7 +2,7 @@ import { useState, type SubmitEvent } from 'react';
 import { liftRegistry } from '../../lifts';
 import { pickVideo } from '../platform/pick-video';
 import { loadLastLift, saveLastLift } from '../preferences/last-lift';
-import { APP_VERSION } from '../version';
+import { APP_COMMIT, APP_VERSION } from '../version';
 
 interface ChooseClipProps {
   onStart: (liftId: string, file: File) => void;
@@ -116,7 +116,10 @@ export function ChooseClip({ onStart }: ChooseClipProps) {
         Analyse set
       </button>
       <p className="muted">The video is processed on this device and never uploaded.</p>
-      <p className="muted version">Version {APP_VERSION}</p>
+      <p className="muted version">
+        {APP_VERSION}
+        {APP_COMMIT && <span className="version__commit"> · {APP_COMMIT}</span>}
+      </p>
     </form>
   );
 }
