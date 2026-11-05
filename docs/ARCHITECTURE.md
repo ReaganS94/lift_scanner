@@ -713,7 +713,9 @@ else is pure, in `src/bar/`.
   stretch followed without starting again, and it is trusted when its median
   confidence is at least `TRUSTED_PLATE_CONFIDENCE` (0.7). Judged per lock, not
   per frame, because on a clean side-on clip the score dips to about 0.6 at
-  lockout. So a lock the checks wouldn't use isn't shown as if it were the bar.
+  lockout. This hides weak locks such as a partial oval, but it is not the
+  checks' own test (median per rep plus the rise guard): a clean but wrong
+  circle, such as the far plate filmed face-on (0.88), is still drawn.
 - On a made-up clip (the sample photo with a plate drawn on, rising 200 px and
   drifting 40 px) it followed the plate in 178 of 181 frames, within 3 px.
 - On Reagan's first gym clip (27 s, iPhone, side-on from floor level) it found
