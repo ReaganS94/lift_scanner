@@ -7,6 +7,7 @@ import {
   themeColour,
   type SkeletonStyle,
 } from '../../skeleton/draw-skeleton';
+import { videoPicture } from '../../skeleton/video-picture';
 
 /** Joints to pick out in a result's colour, while paused on the frame it was measured at. */
 export interface SkeletonHighlight {
@@ -47,7 +48,7 @@ export function SkeletonOverlay({ sequence, videoRef, highlight }: SkeletonOverl
     styleRef.current ??= skeletonStyle(canvas, highlightRef.current);
     const drawCurrent = () => {
       const style = styleRef.current ?? skeletonStyle(canvas, highlightRef.current);
-      drawFrame(canvas, sequence, Math.round(video.currentTime * sequence.sampleFps), style);
+      drawFrame(canvas, video, sequence, Math.round(video.currentTime * sequence.sampleFps), style);
     };
     redrawRef.current = drawCurrent;
 
@@ -107,8 +108,14 @@ function skeletonStyle(
   };
 }
 
+/**
+ * Draws one frame over the video's picture. The picture's place and size are measured on every
+ * draw rather than taken from the canvas, so a canvas that doesn't exactly cover the picture
+ * (as happened on an iPhone, where the skeleton came out too big) still lines up.
+ */
 function drawFrame(
   canvas: HTMLCanvasElement,
+  video: HTMLVideoElement,
   sequence: PoseSequence,
   frameIndex: number,
   style: OverlayStyle,
@@ -118,16 +125,25 @@ function drawFrame(
   if (!context) return;
   context.clearRect(0, 0, canvas.width, canvas.height);
 
+  const picture = videoPicture(
+    canvas.getBoundingClientRect(),
+    video.getBoundingClientRect(),
+    video.videoWidth,
+    video.videoHeight,
+  );
+  context.save();
+  context.translate(picture.x, picture.y);
   const landmarks = sequence.frames[frameIndex]?.landmarks;
-  if (landmarks) drawSkeleton(context, landmarks, canvas.height, style);
+  if (landmarks) drawSkeleton(context, landmarks, picture.height, style);
   if (sequence.barTrack) {
     drawBarPath(
       context,
       sequence.barTrack,
       frameIndex,
       sequence.sampleFps,
-      canvas.height,
+      picture.height,
       style.barColour,
     );
   }
+  context.restore();
 }
