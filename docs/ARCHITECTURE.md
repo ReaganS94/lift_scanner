@@ -696,13 +696,22 @@ else is pure, in `src/bar/`.
   circumference wins. Its score is measured directly, as the share of 72 points
   around the circle with an edge facing the centre within 2 pixels.
 - **Finding the plate the first time** (`plate-tracker.ts`): around the middle of
-  the feet, its centre about 0.4 torso lengths above the ankles, at radii of 0.3
-  to 1.3 torso lengths. A 45 cm plate is about 0.45 from a few metres away, but
+  the feet, from 1.4 torso lengths above the ankles to 1.8 below, at radii of 0.3
+  to 1.3 torso lengths. When the plate hides the ankles, the knees stand in, 0.8
+  torso lengths higher. A 45 cm plate is about 0.45 from a few metres away, but
   it is nearer the camera than the lifter, so it looks bigger when the camera is
   close: 0.85 in Reagan's first gym clip, filmed from about 1.5 m at floor level.
-  With the range capped at 0.6 that clip locked onto a kettlebell instead. It needs 65% of the edge,
-  in the same place three frames in a row, because curves such as a bent leg can
-  look like part of a circle.
+  With the range capped at 0.6 that clip locked onto a kettlebell instead. Filmed
+  at an angle, the near plate shows below the ankles (about 0.9 torso lengths on
+  a clip about 35° off side-on).
+- It takes the **largest** circle with at least 65% of its edge found, not the
+  clearest: the far plate can have a cleaner edge, but the near plate is always
+  the bigger of the two, and it is the one that hides the knees. On that angled
+  clip, taking the clearest made the result depend on the run: one run of the
+  same video found the near plate (0.94), another the far one (0.61, so it wasn't
+  trusted, and lockout judged the hidden knees). It needs the circle in the same
+  place three frames in a row, because curves such as a bent leg can look like
+  part of a circle.
 - **Following it**: each frame looks within 0.3 torso lengths of where it was
   (widening by 0.1 per missed frame), for a circle within 15% of the size it was
   first found at, with at least 30% of the edge. After 15 missed frames in a row

@@ -8,7 +8,7 @@ import {
   sideDeadliftFigure,
 } from '../testing/deadlift-pose';
 import { readScene, type Disk, type SceneOptions } from '../testing/plate-scene';
-import { PORTRAIT_ASPECT } from '../testing/synthetic-pose';
+import { PORTRAIT_ASPECT, setVisibility } from '../testing/synthetic-pose';
 import { createPlateTracker } from './plate-tracker';
 
 /** A 20 kg plate is 45 cm across; a torso is about 50 cm. */
@@ -119,5 +119,42 @@ describe('createPlateTracker', () => {
       ),
     );
     expect(found.every((point) => point === null)).toBe(true);
+  });
+
+  it('takes the near plate over the far one, as when filmed from an angle', () => {
+    // The far plate is smaller, further back and higher, and its edge is clearer: dark on the
+    // floor, where the near plate's is faint, as when hands and legs cross it.
+    const tracker = createPlateTracker(PORTRAIT_ASPECT);
+    const landmarks = sideDeadliftFigure(DEADLIFT_SETUP);
+    const near = plateFor(landmarks);
+    const far = {
+      x: near.x - 0.7 * near.radius,
+      y: near.y - 0.6 * near.radius,
+      radius: 0.65 * near.radius,
+      shade: 0,
+    };
+    const found = Array.from({ length: 6 }, (_, frame) =>
+      tracker.track({ timeMs: frame * 33, landmarks }, (region, ppu) =>
+        readScene(near, region, ppu, { plate: 110, distractors: [far] }),
+      ),
+    );
+    const point = found[5];
+    expect(point?.radius).toBeCloseTo(near.radius, 2);
+    expect(Math.abs((point?.x ?? 0) - near.x)).toBeLessThan(0.01);
+  });
+
+  it('finds the plate when it hides the ankles, from the knees', () => {
+    const tracker = createPlateTracker(PORTRAIT_ASPECT);
+    const landmarks = sideDeadliftFigure(DEADLIFT_SETUP);
+    for (const name of ['leftAnkle', 'rightAnkle', 'leftFootIndex', 'rightFootIndex'] as const) {
+      setVisibility(landmarks, name, 0);
+    }
+    const plate = plateFor(landmarks);
+    const found = Array.from({ length: 6 }, (_, frame) =>
+      tracker.track({ timeMs: frame * 33, landmarks }, (region, ppu) =>
+        readScene(plate, region, ppu),
+      ),
+    );
+    expect(Math.abs((found[5]?.x ?? 0) - plate.x)).toBeLessThan(0.01);
   });
 });
