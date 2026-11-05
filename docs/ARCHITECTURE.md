@@ -709,8 +709,9 @@ else is pure, in `src/bar/`.
 - Pictures are read at a scale that makes the plate about 24 pixels in radius,
   so each frame's search is small next to the pose model's.
 - The results video draws the plate's outline and the last 3 s of its path, so
-  what the tracker found can be checked by eye. Only locks the plate is trusted in are drawn (`trustedPlates`): a lock is a
-  stretch followed without starting again, and it is trusted when its median
+  what the tracker found can be checked by eye. Only locks the plate is trusted
+  in are drawn (`trustedPlates`): a lock is a stretch followed without starting
+  again, and it is trusted when its median
   confidence is at least `TRUSTED_PLATE_CONFIDENCE` (0.7). Judged per lock, not
   per frame, because on a clean side-on clip the score dips to about 0.6 at
   lockout. This hides weak locks such as a partial oval, but it is not the
