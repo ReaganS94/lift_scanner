@@ -613,7 +613,7 @@ settings are in `vite.config.ts`.
 - **The bar isn't tracked directly.** Bar path is approximated from the hands. A
   later version could add a small object detector for the plate.
 - **Side-view deadlifts hide the hands.** Filmed straight side-on, the near plate
-  sits between the camera and the hands at any distance, height or lens, so bar
+  sits between the camera and the hands at any practical camera height, so bar
   path is usually skipped. The other deadlift checks use the shoulders, hips and
   knees, which stay in view. Turning the camera to show the hands would distort
   the hip and knee angles, so the deadlift filming tips say to stay side-on.
