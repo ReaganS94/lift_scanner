@@ -1,14 +1,13 @@
-import { FilesetResolver, PoseLandmarker } from '@mediapipe/tasks-vision';
+import { FilesetResolver } from '@mediapipe/tasks-vision';
 import type { PoseEstimator, PoseFrame, SampledFrame } from '../../core';
-import { toSharedUnits } from './to-shared-units';
-
-/**
- * The "full" pose model: the middle of MediaPipe's lite, full and heavy options, a good
- * balance of accuracy and speed on a phone. Pinned to a version so results don't change
- * underneath us. Downloaded once (about 9 MB), then cached by the browser.
- */
-export const DEFAULT_POSE_MODEL_URL =
-  'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task';
+import {
+  createPoseModels,
+  DEFAULT_POSE_MODEL_URL,
+  type Delegate,
+  type Fileset,
+  type PoseModels,
+} from './mediapipe-models';
+import { toSharedUnits, type NormalizedLandmark } from './to-shared-units';
 
 export interface MediaPipePoseEstimatorOptions {
   /** Where MediaPipe's wasm files are served. scripts/copy-mediapipe-wasm.mjs puts them here. */
@@ -16,14 +15,23 @@ export interface MediaPipePoseEstimatorOptions {
   readonly modelUrl?: string;
 }
 
-type Delegate = 'GPU' | 'CPU';
-type Fileset = Awaited<ReturnType<typeof FilesetResolver.forVisionTasks>>;
+/**
+ * The finder looks for everyone in one frame in this many. At 30 frames a second that is six
+ * times a second, often enough that the signal step's gap filling bridges the frames between.
+ */
+const FIND_EVERY_FRAMES = 5;
 
-/** Finds poses with MediaPipe Pose Landmarker, running on the device. */
+/**
+ * Finds poses with MediaPipe Pose Landmarker, running on the device.
+ *
+ * Every frame's pose comes from a tracker that follows one person smoothly; every few frames a
+ * finder also looks for everyone (see PoseModels). All of them go in PoseFrame.people, and
+ * people/pickLifter later works out which is the lifter.
+ */
 export class MediaPipePoseEstimator implements PoseEstimator<TexImageSource> {
   private readonly options: MediaPipePoseEstimatorOptions;
   private fileset: Fileset | null = null;
-  private landmarker: PoseLandmarker | null = null;
+  private models: PoseModels | null = null;
   /**
    * The load in progress or done. Shared so that a run cancelled while the model loads, followed
    * by a new run, waits for the same load instead of creating a second model.
@@ -31,7 +39,6 @@ export class MediaPipePoseEstimator implements PoseEstimator<TexImageSource> {
   private loading: Promise<void> | null = null;
   /** Bumped by dispose(), so a load that finishes afterwards knows it is no longer wanted. */
   private generation = 0;
-  private delegate: Delegate = 'GPU';
   /** Whether the GPU has produced a result yet; until then a failure falls back to the CPU. */
   private gpuProven = false;
   /**
@@ -40,6 +47,8 @@ export class MediaPipePoseEstimator implements PoseEstimator<TexImageSource> {
    */
   private timestampOffsetMs = 0;
   private lastTimestampMs = -1;
+  /** Frames looked at in this clip, so the finder runs on its first frame and every few after. */
+  private clipFrames = 0;
 
   constructor(options: MediaPipePoseEstimatorOptions) {
     this.options = options;
@@ -58,63 +67,72 @@ export class MediaPipePoseEstimator implements PoseEstimator<TexImageSource> {
 
   async estimate(frame: SampledFrame<TexImageSource>, aspectRatio: number): Promise<PoseFrame> {
     if (frame.timeMs + this.timestampOffsetMs <= this.lastTimestampMs) {
+      // Time went back, so this is a new clip.
       this.timestampOffsetMs = this.lastTimestampMs + 1 - frame.timeMs;
+      this.clipFrames = 0;
     }
     this.lastTimestampMs = frame.timeMs + this.timestampOffsetMs;
+    const find = this.clipFrames % FIND_EVERY_FRAMES === 0;
+    this.clipFrames += 1;
 
-    let result;
+    let people;
     try {
-      result = this.requireLandmarker().detectForVideo(frame.image, this.lastTimestampMs);
+      people = this.look(frame.image, find);
     } catch (error) {
       // Some GPU problems only show up on the first frame rather than at start-up.
-      if (this.delegate !== 'GPU' || this.gpuProven) throw error;
-      this.landmarker?.close();
-      this.landmarker = await this.create('CPU');
-      result = this.landmarker.detectForVideo(frame.image, this.lastTimestampMs);
+      if (this.requireModels().delegate !== 'GPU' || this.gpuProven) throw error;
+      this.models?.close();
+      this.models = await this.create('CPU');
+      people = this.look(frame.image, find);
     }
-    if (this.delegate === 'GPU') this.gpuProven = true;
+    if (this.requireModels().delegate === 'GPU') this.gpuProven = true;
 
-    const pose = result.landmarks[0];
-    return { timeMs: frame.timeMs, landmarks: pose ? toSharedUnits(pose, aspectRatio) : null };
+    const shared = people.map((pose) => toSharedUnits(pose, aspectRatio));
+    return { timeMs: frame.timeMs, landmarks: shared[0] ?? null, people: shared };
   }
 
   dispose(): void {
-    this.landmarker?.close();
-    this.landmarker = null;
+    this.models?.close();
+    this.models = null;
     this.loading = null;
     this.generation += 1;
+  }
+
+  /**
+   * The tracked person first, then everyone the finder saw, if it looked. The finder sees the
+   * tracked person too; people/linkPeople drops such repeats.
+   */
+  private look(image: TexImageSource, find: boolean): NormalizedLandmark[][] {
+    const { tracker, finder } = this.requireModels();
+    const tracked = tracker.detectForVideo(image, this.lastTimestampMs).landmarks;
+    return find ? [...tracked, ...finder.detect(image).landmarks] : tracked;
   }
 
   private async load(): Promise<void> {
     const generation = this.generation;
     this.fileset ??= await FilesetResolver.forVisionTasks(this.options.wasmBaseUrl);
-    let landmarker: PoseLandmarker;
+    let models: PoseModels;
     try {
-      landmarker = await this.create('GPU');
+      models = await this.create('GPU');
     } catch {
       // Some phones and browsers can't run the model on the GPU. The CPU is slower but works.
-      landmarker = await this.create('CPU');
+      models = await this.create('CPU');
     }
     if (generation !== this.generation) {
-      landmarker.close();
+      models.close();
       throw new Error('The pose model was released while it was loading.');
     }
-    this.landmarker = landmarker;
+    this.models = models;
   }
 
-  private async create(delegate: Delegate): Promise<PoseLandmarker> {
+  private create(delegate: Delegate): Promise<PoseModels> {
     if (!this.fileset) throw new Error('Call init() before estimate().');
-    const landmarker = await PoseLandmarker.createFromOptions(this.fileset, {
-      baseOptions: { modelAssetPath: this.options.modelUrl ?? DEFAULT_POSE_MODEL_URL, delegate },
-      runningMode: 'VIDEO',
-      numPoses: 1,
-    });
-    this.delegate = delegate;
-    return landmarker;
+    const modelUrl = this.options.modelUrl ?? DEFAULT_POSE_MODEL_URL;
+    return createPoseModels(this.fileset, delegate, modelUrl);
   }
 
-  private requireLandmarker(): PoseLandmarker {
-    if (!this.landmarker) throw new Error('Call init() before estimate().');
-    return this.landmarker;
+  private requireModels(): PoseModels {
+    if (!this.models) throw new Error('Call init() before estimate().');
+    return this.models;
   }
 }
