@@ -433,7 +433,9 @@ different times.
   model still places the knee, often confidently and wrongly (Reagan's first gym
   clip read 32° of knee bend on straight legs). So a knee inside the circle of a
   trusted plate (`trustedPlates`, even one not found for enough of the rep to
-  follow the bar), or not seen, isn't judged: the hips are then measured against
+  follow the bar) that is in the hands (`plateInHands`: its centre within 1.5
+  radii of a seen wrist; 0.8 to 1.2 on Reagan's clips, since the model places
+  the wrist at the edge of the hand), or not seen, isn't judged: the hips are then measured against
   the hip-to-ankle line, which is the thigh's line when the knee is straight, and
   the message says only the hips were checked. With the knee slightly bent the
   hip-to-ankle line leans less than the thigh, so the hips read a little lenient.

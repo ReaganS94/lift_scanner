@@ -2,7 +2,7 @@ import type { BarPoint, CheckResult, FormCheck, PoseFrame, RepContext } from '..
 import { trustedPlates } from '../../../bar';
 import { forwardTilt, sidePoint, type Facing } from '../../../geometry';
 import { repFrames } from '../../../signal';
-import { hiddenByPlate } from '../hidden-by-plate';
+import { hiddenByPlate, plateInHands } from '../hidden-by-plate';
 import { pullOf, torsoLean } from '../pull';
 
 /**
@@ -27,7 +27,8 @@ const ID = 'deadlift.lockout';
  *
  * Any plate the tracker was sure of counts here (see trustedPlates), even when it wasn't found
  * for enough of the rep to follow the bar: the plate only needs to be seen at the top to hide
- * the knees there.
+ * the knees there. It must be in the hands at that moment (see plateInHands), so a round
+ * outline that isn't the bar can't hide them.
  */
 export const lockout: FormCheck = {
   id: ID,
@@ -43,7 +44,7 @@ export const lockout: FormCheck = {
     let best: (Bends & { frameIndex: number }) | null = null;
     for (const { frame, index } of repFrames(context)) {
       if (Math.abs(index - context.rep.turnFrame) > window) continue;
-      const bends = bendsAt(frame, context, pull.facing, plates[index]);
+      const bends = bendsAt(frame, context, pull.facing, plateInHands(frame, plates[index]));
       if (!bends) continue;
       // Measuring both joints beats measuring only the hips; then the least bent moment wins.
       const better =

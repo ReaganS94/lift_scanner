@@ -121,6 +121,19 @@ describe('deadlift lockout', () => {
       expect(lockout.evaluate(context)).toMatchObject({ status: 'fail' });
     });
 
+    it("doesn't let a round outline away from the hands hide the knees", () => {
+      // A steady circle round the knee, as a curved outline by the legs could give, while the
+      // wrists are well above it: not the bar, so the guessed knee is still judged.
+      const guessed = plateOverKnees(sideDeadliftRep());
+      const barTrack = guessed.sequence.frames.map((frame) => {
+        const knee = frame.landmarks?.[LANDMARK.leftKnee];
+        return knee ? { x: knee.x, y: knee.y, radius: 0.03, confidence: 0.9 } : null;
+      });
+      expect(
+        lockout.evaluate({ ...guessed, sequence: { ...guessed.sequence, barTrack } }),
+      ).toMatchObject({ status: 'fail' });
+    });
+
     it('still catches hips short of lockout, measured to the ankle', () => {
       // 15° with the thigh; the hip-to-ankle line leans about half as much as the thigh when
       // the knee is 5° bent, so it reads a little less.
