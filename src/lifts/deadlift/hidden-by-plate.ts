@@ -1,12 +1,6 @@
-import type { BarPoint, PoseFrame } from '../../core';
-import { pointAt, type Vec2 } from '../../geometry';
-
-/**
- * How far from a wrist, in plate radii, the plate's centre may be and still be taken as the
- * plate on the bar in the hands. The model places the wrist at the edge of the hand rather than
- * on the bar: 0.8 to 1.2 radii from the plate's centre at lockout on Reagan's clips.
- */
-const WRIST_REACH_RADII = 1.5;
+import type { BarPoint, RepContext } from '../../core';
+import { averagePoint, SHOULDERS, type Vec2 } from '../../geometry';
+import { MIN_RISE_SHARE_OF_SHOULDERS } from './pull';
 
 /**
  * Whether a body point falls inside the near plate's circle in the frame. From the side the
@@ -18,21 +12,29 @@ export function hiddenByPlate(point: Vec2, plate: BarPoint | null | undefined): 
 }
 
 /**
- * The plate, if it is in the lifter's hands in this frame: within reach of a wrist that was
- * seen. A large round outline that isn't the bar, such as the legs' curve at the floor, is not.
- * With no wrist seen there is nothing to check against, so the plate is kept.
+ * The plates found in a rep, or none if they didn't move with the bar. Over the frames from the
+ * rep's start to its top where the plate was found, it has to rise at least half as much as the
+ * shoulders did over the same frames, as in pullOf. A round outline that isn't the bar, such as
+ * the legs' curve at the floor, stays put. Measured over the frames the plate was found in, so a
+ * plate first found halfway up still counts.
  */
-export function plateInHands(
-  frame: PoseFrame,
-  plate: BarPoint | null | undefined,
-): BarPoint | null {
-  if (!plate) return null;
-  const wrists = [pointAt(frame, 'leftWrist'), pointAt(frame, 'rightWrist')].filter(
-    (wrist): wrist is Vec2 => wrist !== null,
-  );
-  if (wrists.length === 0) return plate;
-  const held = wrists.some(
-    (wrist) => Math.hypot(wrist.x - plate.x, wrist.y - plate.y) <= WRIST_REACH_RADII * plate.radius,
-  );
-  return held ? plate : null;
+export function platesOnTheBar(
+  context: RepContext,
+  plates: readonly (BarPoint | null)[],
+): readonly (BarPoint | null)[] {
+  const { rep, sequence } = context;
+  const plateYs: number[] = [];
+  const shoulderYs: number[] = [];
+  for (let index = rep.startFrame; index <= rep.turnFrame; index++) {
+    const plate = plates[index];
+    const frame = sequence.frames[index];
+    const shoulders = frame ? averagePoint(frame, SHOULDERS) : null;
+    if (!plate || !shoulders) continue;
+    plateYs.push(plate.y);
+    shoulderYs.push(shoulders.y);
+  }
+  const rise = (ys: number[]) => (ys.length === 0 ? 0 : Math.max(...ys) - Math.min(...ys));
+  return rise(plateYs) >= MIN_RISE_SHARE_OF_SHOULDERS * rise(shoulderYs)
+    ? plates
+    : plates.map(() => null);
 }
