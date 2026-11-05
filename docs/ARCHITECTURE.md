@@ -54,15 +54,17 @@ document in the same pull request.
 
 1. **Video**: decode the user's file and step through it at a fixed sample rate.
 2. **Pose**: run the pose model on each frame and get 33 body landmarks with a
-   confidence score each.
-3. **Signal**: fill short gaps, drop low-confidence points and smooth jitter.
-4. **View**: work out whether the clip is a side view or a front/back view (the
+   confidence score each, for up to three people.
+3. **Lifter**: pick the lifter out of everyone in shot, using the whole clip
+   (see "Picking the lifter").
+4. **Signal**: fill short gaps, drop low-confidence points and smooth jitter.
+5. **View**: work out whether the clip is a side view or a front/back view (the
    user can override this).
-5. **Reps**: split the sequence into reps using a lift-specific signal, for
+6. **Reps**: split the sequence into reps using a lift-specific signal, for
    example hip height for a squat.
-6. **Checks**: run the lift's form checks on each rep. Each check declares which
+7. **Checks**: run the lift's form checks on each rep. Each check declares which
    views it supports and is skipped on any other view.
-7. **Report**: collect results into a report the UI renders and storage saves.
+8. **Report**: collect results into a report the UI renders and storage saves.
 
 The orchestration lives in one place, `src/analysis/`, so the whole flow can be
 read top to bottom in a single file.
@@ -77,6 +79,7 @@ src/
   view/          Camera view detection from a pose sequence.
   reps/          Generic rep segmentation driven by a signal.
   bar/           Follows the near plate (the bar's end) as a circle in the frame.
+  people/        Picks the lifter out of everyone the pose model found.
   lifts/         One folder per lift, plus the lift registry.
     registry.ts
     squat/
@@ -128,23 +131,24 @@ ui ──▶ analysis ──▶ view, reps, lifts ──▶ geometry ──▶ s
  └──▶ adapters ─────────────────────────────────────────────────────┘
 ```
 
-| Layer                  | May import (besides itself and `core`)                  |
-| ---------------------- | ------------------------------------------------------- |
-| `core`                 | nothing                                                 |
-| `geometry`             | `signal`                                                |
-| `signal`               | nothing                                                 |
-| `view`                 | `geometry`, `signal`                                    |
-| `reps`                 | `geometry`, `signal`                                    |
-| `lifts`                | `geometry`, `signal` (and never another lift's folder)  |
-| `bar`                  | `geometry`, `signal`                                    |
-| `report`               | nothing                                                 |
-| `analysis`             | `geometry`, `signal`, `view`, `reps`, `lifts`, `report` |
-| `adapters`             | nothing                                                 |
-| `ui`                   | anything except `testing`                               |
-| `testing` (tests only) | nothing; only `*.test.ts` files may import it           |
+| Layer                  | May import (besides itself and `core`)                            |
+| ---------------------- | ----------------------------------------------------------------- |
+| `core`                 | nothing                                                           |
+| `geometry`             | `signal`                                                          |
+| `signal`               | nothing                                                           |
+| `view`                 | `geometry`, `signal`                                              |
+| `reps`                 | `geometry`, `signal`                                              |
+| `lifts`                | `geometry`, `signal` (and never another lift's folder)            |
+| `bar`                  | `geometry`, `signal`                                              |
+| `people`               | `signal`                                                          |
+| `report`               | nothing                                                           |
+| `analysis`             | `geometry`, `signal`, `view`, `reps`, `lifts`, `people`, `report` |
+| `adapters`             | nothing                                                           |
+| `ui`                   | anything except `testing`                                         |
+| `testing` (tests only) | nothing; only `*.test.ts` files may import it                     |
 
-- `core`, `geometry`, `signal`, `view`, `reps`, `lifts`, `bar`, `analysis` and
-  `report` are **pure TypeScript**. They don't touch the DOM, the camera, files or
+- `core`, `geometry`, `signal`, `view`, `reps`, `lifts`, `bar`, `people`,
+  `analysis` and `report` are **pure TypeScript**. They don't touch the DOM, the camera, files or
   storage. That makes them fast to unit test in Node with recorded fixtures.
 - Only `adapters` and `ui` touch browser APIs.
 - `analysis` receives adapters as arguments (dependency injection), so tests can
@@ -548,17 +552,68 @@ CI runs type checking, lint, the import rules and tests on every pull request. O
   as done before the frame is decoded.
 - Each analysis run has its own `AbortController`. Cancel works during every
   slow step, including loading the video and downloading the model.
-- `adapters/pose/MediaPipePoseEstimator` wraps MediaPipe Pose Landmarker in video
-  mode and converts its output with `toSharedUnits` (see Coordinates). MediaPipe
-  needs timestamps that only increase, so it offsets each new clip's times. It
-  uses the GPU, and falls back to the CPU if the GPU fails at start-up or on
-  the first frame.
+- `adapters/pose/MediaPipePoseEstimator` runs two copies of MediaPipe Pose
+  Landmarker (`PoseModels`) and converts their output with `toSharedUnits` (see
+  Coordinates):
+  - a **tracker** in video mode follows one person from frame to frame, which
+    keeps joints steady and holds on through hard poses such as knees behind a
+    plate. MediaPipe needs timestamps that only increase, so it offsets each new
+    clip's times.
+  - a **finder** in image mode looks for up to three people afresh in every
+    fifth frame (six times a second), because the tracker only looks for someone
+    new once it loses the person it follows.
+
+  Both go in `PoseFrame.people`, the tracked person first; `landmarks` is that
+  person until `pickLifter` replaces it. The pose models use the GPU, and fall
+  back to the CPU if the GPU fails at start-up or on the first frame.
+
 - MediaPipe's WebAssembly runtime is copied from `node_modules` into
   `public/mediapipe/` by `scripts/copy-mediapipe-wasm.mjs` after every install,
   so the app serves it itself at exactly the installed version. The model file
   (about 9 MB, pinned version) is downloaded from Google's model storage on first
   use and then kept by the service worker (see Installing on a phone). No video
   data is sent anywhere.
+
+### Picking the lifter
+
+Gyms are busy. MediaPipe's video mode follows whoever it finds first and only
+looks again once it loses them: on a real clip (IMG_1546) the skeleton sat on two
+people walking behind the lifter for the first 1.7 seconds, and on another
+(IMG_1543) it moved to someone pushing a sled once the lifter walked off. Asking
+video mode for three people didn't help, as it never looked for the others, and
+image mode alone (looking afresh every frame) lost the knees behind the plate in
+most frames of a third clip. Hence the tracker plus finder above, and
+`people/pickLifter` (run first in `prepareClip`) choosing the lifter with
+hindsight:
+
+1. `linkPeople` joins each frame's people into tracks. Two people in one frame
+   less than half a torso apart are one person found by both models, and only
+   the first is kept. Each sighting goes to the nearest track that could have
+   moved there (up to 6 torso lengths a second, plus 0.3 for jitter), and a
+   track unseen for 0.5 s ends.
+2. Each track scores the time from its first to last sighting (in frames) ×
+   median torso length ÷ (1 + sideways wander in torso lengths), where wander
+   is the spread of the torso's middle between its 10th and 90th percentiles.
+   The lifter is there longest, closest to the phone (biggest) and stays over
+   the bar; others walk, lunge or carry. Time, not the number of sightings: the
+   tracked person is seen every frame and everyone else only in finder frames,
+   which would otherwise hand the win to whoever the tracker latched onto.
+3. The best track becomes `landmarks` in every frame, joined by any other
+   track that doesn't overlap it in time, sits within 1.5 torso lengths of the
+   lifter's usual place and is about their size (the model sometimes loses the
+   lifter for a moment, often bent over the bar). Frames without the lifter
+   get no pose even if someone else was there: measuring the wrong person is
+   worse than measuring nobody.
+
+Limits:
+
+- A lifter who walks off and comes back to a different spot (to chalk up, say)
+  becomes a separate track that isn't joined back, so only one of the two
+  stretches is measured.
+- The live skeleton shown while a clip is read still shows the tracked person,
+  since the choice needs the whole clip.
+- "Download pose data" includes everyone found, so the file can be up to about
+  three times bigger than before.
 
 ## Installing on a phone
 

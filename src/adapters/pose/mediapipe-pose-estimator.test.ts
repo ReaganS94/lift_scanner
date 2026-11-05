@@ -3,6 +3,7 @@ import { MediaPipePoseEstimator } from './mediapipe-pose-estimator';
 
 interface CreateOptions {
   readonly baseOptions: { readonly delegate: string };
+  readonly runningMode: string;
 }
 
 const mediapipe = vi.hoisted(() => ({
@@ -17,21 +18,38 @@ vi.mock('@mediapipe/tasks-vision', () => ({
 
 const IMAGE = {} as TexImageSource;
 
+/** One landmark is enough to tell people apart in these tests. */
+const person = (x: number) => [{ x, y: 0.5, z: 0, visibility: 1 }];
+
 function fakeLandmarker() {
   return {
     close: vi.fn<() => void>(),
+    detect: vi.fn<(image: unknown) => { landmarks: unknown[] }>(() => ({ landmarks: [] })),
     detectForVideo: vi.fn<(image: unknown, timestampMs: number) => { landmarks: unknown[] }>(
       () => ({ landmarks: [] }),
     ),
   };
 }
 
+/** A tracker and a finder, created in that order by each model load. */
+function fakeModels() {
+  const tracker = fakeLandmarker();
+  const finder = fakeLandmarker();
+  mediapipe.createFromOptions.mockImplementation((_, options) =>
+    Promise.resolve(options.runningMode === 'VIDEO' ? tracker : finder),
+  );
+  return { tracker, finder };
+}
+
 function newEstimator(): MediaPipePoseEstimator {
   return new MediaPipePoseEstimator({ wasmBaseUrl: '/wasm' });
 }
 
+/** The delegate of each model load (each load creates a tracker, then a finder). */
 function delegatesTried(): string[] {
-  return mediapipe.createFromOptions.mock.calls.map(([, options]) => options.baseOptions.delegate);
+  return mediapipe.createFromOptions.mock.calls
+    .filter(([, options]) => options.runningMode === 'VIDEO')
+    .map(([, options]) => options.baseOptions.delegate);
 }
 
 beforeEach(() => {
@@ -42,19 +60,19 @@ beforeEach(() => {
 describe('MediaPipePoseEstimator', () => {
   it('shares one model load between overlapping init calls', async () => {
     // A run cancelled while the model loads, then a new run, calls init() twice.
-    mediapipe.createFromOptions.mockResolvedValue(fakeLandmarker());
+    fakeModels();
     const estimator = newEstimator();
     await Promise.all([estimator.init(), estimator.init()]);
-    expect(mediapipe.createFromOptions).toHaveBeenCalledTimes(1);
+    expect(mediapipe.createFromOptions).toHaveBeenCalledTimes(2);
   });
 
   it('tries again on the next init after a failed load', async () => {
     mediapipe.forVisionTasks.mockRejectedValueOnce(new Error('offline'));
-    mediapipe.createFromOptions.mockResolvedValue(fakeLandmarker());
+    fakeModels();
     const estimator = newEstimator();
     await expect(estimator.init()).rejects.toThrow('offline');
     await estimator.init();
-    expect(mediapipe.createFromOptions).toHaveBeenCalledTimes(1);
+    expect(delegatesTried()).toEqual(['GPU']);
   });
 
   it('falls back to the CPU when the GPU model fails to start', async () => {
@@ -65,20 +83,37 @@ describe('MediaPipePoseEstimator', () => {
     expect(delegatesTried()).toEqual(['GPU', 'CPU']);
   });
 
+  it('closes the tracker when the finder fails to start', async () => {
+    const tracker = fakeLandmarker();
+    mediapipe.createFromOptions
+      .mockResolvedValueOnce(tracker)
+      .mockRejectedValueOnce(new Error('out of memory'))
+      .mockResolvedValue(fakeLandmarker());
+    await newEstimator().init();
+    expect(tracker.close).toHaveBeenCalled();
+    expect(delegatesTried()).toEqual(['GPU', 'CPU']);
+  });
+
   it('switches to the CPU when the GPU fails on the first frame', async () => {
-    const gpu = fakeLandmarker();
-    gpu.detectForVideo.mockImplementation(() => {
+    const gpuTracker = fakeLandmarker();
+    gpuTracker.detectForVideo.mockImplementation(() => {
       throw new Error('GPU lost');
     });
-    const cpu = fakeLandmarker();
-    mediapipe.createFromOptions.mockResolvedValueOnce(gpu).mockResolvedValueOnce(cpu);
+    const gpuFinder = fakeLandmarker();
+    const cpuTracker = fakeLandmarker();
+    cpuTracker.detectForVideo.mockReturnValue({ landmarks: [person(0.5)] });
+    mediapipe.createFromOptions
+      .mockResolvedValueOnce(gpuTracker)
+      .mockResolvedValueOnce(gpuFinder)
+      .mockResolvedValueOnce(cpuTracker)
+      .mockResolvedValueOnce(fakeLandmarker());
     const estimator = newEstimator();
     await estimator.init();
 
     const pose = await estimator.estimate({ timeMs: 0, image: IMAGE }, 1);
-    expect(pose.landmarks).toBeNull();
-    expect(gpu.close).toHaveBeenCalled();
-    expect(cpu.detectForVideo).toHaveBeenCalledTimes(1);
+    expect(pose.landmarks).not.toBeNull();
+    expect(gpuTracker.close).toHaveBeenCalled();
+    expect(gpuFinder.close).toHaveBeenCalled();
     expect(delegatesTried()).toEqual(['GPU', 'CPU']);
   });
 
@@ -118,17 +153,34 @@ describe('MediaPipePoseEstimator', () => {
 
     // The second load is still the shared one, so another init() doesn't start a third.
     await estimator.init();
-    expect(mediapipe.createFromOptions).toHaveBeenCalledTimes(2);
+    expect(delegatesTried()).toHaveLength(2);
   });
 
   it('keeps timestamps increasing when the next clip starts again at 0', async () => {
-    const landmarker = fakeLandmarker();
-    mediapipe.createFromOptions.mockResolvedValue(landmarker);
+    const { tracker } = fakeModels();
     const estimator = newEstimator();
     await estimator.init();
 
     for (const timeMs of [0, 33, 0, 33]) await estimator.estimate({ timeMs, image: IMAGE }, 1);
-    const timestamps = landmarker.detectForVideo.mock.calls.map(([, timestampMs]) => timestampMs);
+    const timestamps = tracker.detectForVideo.mock.calls.map(([, timestampMs]) => timestampMs);
     expect(timestamps).toEqual([0, 33, 34, 67]);
+  });
+
+  it('adds everyone the finder sees, every fifth frame of each clip', async () => {
+    const { tracker, finder } = fakeModels();
+    tracker.detectForVideo.mockReturnValue({ landmarks: [person(0.5)] });
+    finder.detect.mockReturnValue({ landmarks: [person(0.5), person(0.25)] });
+    const estimator = newEstimator();
+    await estimator.init();
+
+    const peopleCounts = [];
+    for (const timeMs of [0, 33, 67, 100, 133, 167, 0]) {
+      const pose = await estimator.estimate({ timeMs, image: IMAGE }, 0.5);
+      peopleCounts.push(pose.people?.length);
+    }
+    // The tracked person first, then the finder's (repeats are dropped later, by linkPeople).
+    expect(peopleCounts).toEqual([3, 1, 1, 1, 1, 3, 3]);
+    const first = await estimator.estimate({ timeMs: 33, image: IMAGE }, 0.5);
+    expect(first.landmarks?.[0]?.x).toBe(0.25);
   });
 });

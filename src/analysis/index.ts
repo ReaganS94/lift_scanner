@@ -2,7 +2,8 @@
  * The analysis pipeline, in the order the app runs it:
  *
  * 1. extractPoses: video frames to raw poses (slow; reports progress).
- * 2. prepareClip: clean the poses and guess the camera view.
+ * 2. prepareClip: pick the lifter out of everyone in shot, clean their poses and guess the
+ *    camera view.
  *    The user then confirms or corrects the view.
  * 3. analyzeSet: find the reps and run the lift's checks on each.
  */

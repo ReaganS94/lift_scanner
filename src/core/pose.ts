@@ -5,8 +5,14 @@ import type { Landmark } from './landmarks';
 export interface PoseFrame {
   /** Time of the frame from the start of the clip, in milliseconds. */
   readonly timeMs: number;
-  /** All 33 landmarks, or null when no person was found in the frame. */
+  /** The lifter's 33 landmarks, or null when the lifter wasn't found in the frame. */
   readonly landmarks: readonly Landmark[] | null;
+  /**
+   * Everyone the pose model found in the frame, each as 33 landmarks. Gyms are busy, so the
+   * first person found is often not the lifter: people/pickLifter chooses the lifter from the
+   * whole clip and sets `landmarks` to them. Absent when the model looks for one person only.
+   */
+  readonly people?: readonly (readonly Landmark[])[];
 }
 
 /** Every sampled frame of a clip, in time order. */

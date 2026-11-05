@@ -14,6 +14,8 @@ const PURE_MODULES = [
   'src/view/**',
   'src/reps/**',
   'src/lifts/**',
+  'src/bar/**',
+  'src/people/**',
   'src/analysis/**',
   'src/report/**',
 ];
