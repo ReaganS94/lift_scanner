@@ -20,20 +20,23 @@ const PLATE_RADIUS_PX = 24;
 
 /**
  * Sizes of plate to look for, in torso lengths. A full-size 45 cm plate is about 0.45 torso
- * lengths across its radius on most lifters; smaller plates go down to about half that.
+ * lengths across its radius when the camera is a few metres away. The plate is nearer the
+ * camera than the lifter, so with the camera close it looks bigger: about 0.85 in a clip
+ * filmed from about 1.5 m at floor level. Smaller plates go down to about 0.3.
  */
 const SEED_MIN_RADIUS_TORSOS = 0.3;
-const SEED_MAX_RADIUS_TORSOS = 0.6;
+const SEED_MAX_RADIUS_TORSOS = 1.3;
 /** The radius the scale is chosen for while looking for the plate the first time. */
-const SEED_EXPECTED_RADIUS_TORSOS = 0.4;
+const SEED_EXPECTED_RADIUS_TORSOS = 0.6;
 /**
  * Where to look for the plate the first time, around the middle of the feet: the bar sits over
- * the middle of the foot, its centre a plate's radius above the floor, which is a little above
- * the ankle. Generous, so a bar set down a little ahead or behind is still found.
+ * the middle of the foot, its centre a plate's radius above the floor, a little above the
+ * ankles. Generous, since the plate's size depends on the camera, and so that a bar set down a
+ * little ahead or behind is still found.
  */
-const SEED_ABOVE_ANKLE_TORSOS = 0.3;
-const SEED_HALF_WIDTH_TORSOS = 1;
-const SEED_HALF_HEIGHT_TORSOS = 0.7;
+const SEED_ABOVE_ANKLE_TORSOS = 0.4;
+const SEED_HALF_WIDTH_TORSOS = 1.3;
+const SEED_HALF_HEIGHT_TORSOS = 1;
 /**
  * At least this much of the plate's edge must be seen to take it as the plate the first time.
  * High, because curved outlines such as a bent leg can look like part of a circle.

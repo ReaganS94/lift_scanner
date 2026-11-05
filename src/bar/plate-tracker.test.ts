@@ -15,16 +15,16 @@ import { createPlateTracker } from './plate-tracker';
 const PLATE_RADIUS = 0.45 * DEADLIFT_TORSO;
 
 /** The plate's centre, on the bar, for a lifter in this pose: the bar is at the hands. */
-function plateFor(landmarks: readonly Landmark[]): Disk {
+function plateFor(landmarks: readonly Landmark[], radius = PLATE_RADIUS): Disk {
   const wrist = landmarks[LANDMARK.leftWrist];
   if (!wrist) throw new Error('No wrist');
-  return { x: wrist.x, y: wrist.y, radius: PLATE_RADIUS };
+  return { x: wrist.x, y: wrist.y, radius };
 }
 
 /** Runs a tracker over frames of a pull from the floor to lockout, `count` frames long. */
 function trackPull(
   count: number,
-  options: SceneOptions & { hidePlate?: (frame: number) => boolean } = {},
+  options: SceneOptions & { hidePlate?: (frame: number) => boolean; radius?: number } = {},
 ): { found: (BarPoint | null)[]; truth: Disk[] } {
   const tracker = createPlateTracker(PORTRAIT_ASPECT);
   const found: (BarPoint | null)[] = [];
@@ -33,7 +33,7 @@ function trackPull(
     // A few frames at the floor first, as when a set starts.
     const t = Math.max(0, (frame - 5) / (count - 6));
     const landmarks = sideDeadliftFigure(between(DEADLIFT_SETUP, DEADLIFT_LOCKOUT, t));
-    const plate = plateFor(landmarks);
+    const plate = plateFor(landmarks, options.radius);
     const pose: PoseFrame = { timeMs: frame * 33, landmarks };
     const hidden = options.hidePlate?.(frame) ?? false;
     truth.push(plate);
@@ -60,6 +60,16 @@ describe('createPlateTracker', () => {
       expect(Math.abs(point.y - plate.y)).toBeLessThan(0.01);
       expect(point.radius / PLATE_RADIUS).toBeCloseTo(1, 1);
     }
+  });
+
+  it('finds a plate that looks big because the camera is close and low', () => {
+    // In a clip filmed from about 1.5 m at floor level the plate's radius was 0.85 torsos.
+    const radius = 0.85 * DEADLIFT_TORSO;
+    const { found, truth } = trackPull(30, { radius });
+    const point = found[29];
+    const plate = truth[29];
+    expect(point?.radius).toBeCloseTo(radius, 2);
+    expect(Math.abs((point?.x ?? 0) - (plate?.x ?? 1))).toBeLessThan(0.01);
   });
 
   it('follows the plate through sensor noise', () => {

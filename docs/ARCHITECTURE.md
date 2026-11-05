@@ -626,8 +626,11 @@ else is pure, in `src/bar/`.
   circumference wins. Its score is measured directly, as the share of 72 points
   around the circle with an edge facing the centre within 2 pixels.
 - **Finding the plate the first time** (`plate-tracker.ts`): around the middle of
-  the feet, its centre about 0.3 torso lengths above the ankles, at radii of 0.3
-  to 0.6 torso lengths (a 45 cm plate is about 0.45). It needs 65% of the edge,
+  the feet, its centre about 0.4 torso lengths above the ankles, at radii of 0.3
+  to 1.3 torso lengths. A 45 cm plate is about 0.45 from a few metres away, but
+  it is nearer the camera than the lifter, so it looks bigger when the camera is
+  close: 0.85 in Reagan's first gym clip, filmed from about 1.5 m at floor level.
+  With the range capped at 0.6 that clip locked onto a kettlebell instead. It needs 65% of the edge,
   in the same place three frames in a row, because curves such as a bent leg can
   look like part of a circle.
 - **Following it**: each frame looks within 0.3 torso lengths of where it was
@@ -640,6 +643,13 @@ else is pure, in `src/bar/`.
   what the tracker found can be checked by eye.
 - On a made-up clip (the sample photo with a plate drawn on, rising 200 px and
   drifting 40 px) it followed the plate in 178 of 181 frames, within 3 px.
+- On Reagan's first gym clip (27 s, iPhone, side-on from floor level) it found
+  the plate after 8 frames and followed it in every frame after, through the
+  lift and lockout, at about 4 ms a frame in Node.
+- `pullOf` only takes the plate (or the hands) as the bar if it rises at least
+  half as much as the shoulders over the rep. A round thing that stays put, such
+  as a plate leaning on a wall, falls back to the shoulders, so a wrong lock can
+  cost bar path but never the other checks.
 
 ## Known limits
 
