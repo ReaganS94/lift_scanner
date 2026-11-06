@@ -14,21 +14,4 @@ export interface AnalysisAdapters<TImage> {
   createPoseEstimator(): PoseEstimator<TImage>;
   /** For following the bar in lifts that ask for it. */
   createRegionReader(): RegionReader<TImage>;
-  /** The phone's back camera, live, for the framing check. Rejects with a readable message. */
-  openCamera(): Promise<LiveCamera<TImage>>;
-}
-
-/** A live camera picture: shown on screen, and handed to the pose estimator frame by frame. */
-export interface LiveCamera<TImage> {
-  /**
-   * Shows the live picture as the first child of `container`, with the given class. Returns a
-   * function that takes it out again.
-   */
-  show(container: HTMLElement, className: string): () => void;
-  /** The current picture, for the pose estimator. */
-  readonly image: TImage;
-  /** Width divided by height of the picture. */
-  readonly aspectRatio: number;
-  /** Turns the camera off. */
-  stop(): void;
 }
