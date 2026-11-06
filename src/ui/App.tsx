@@ -2,9 +2,11 @@ import './styles/fonts';
 import './styles/theme.css';
 import './styles/motion.css';
 import './App.css';
+import { useState } from 'react';
 import { ChooseClip } from './components/ChooseClip';
 import { ConfirmView } from './components/ConfirmView';
 import { ExtractionProgress } from './components/ExtractionProgress';
+import { FramingCheck } from './components/FramingCheck';
 import { SetResults } from './components/results/SetResults';
 import type { AnalysisAdapters } from './flow/adapters';
 import { useAnalysisFlow } from './flow/use-analysis-flow';
@@ -16,6 +18,8 @@ interface AppProps<TImage> {
 export function App<TImage>({ adapters }: AppProps<TImage>) {
   const { state, livePose, start, cancel, confirmView, changeView, reset } =
     useAnalysisFlow(adapters);
+  // The framing check sits outside the analysis flow: it only helps set up the next video.
+  const [checkingFraming, setCheckingFraming] = useState(false);
 
   return (
     <main className="app">
@@ -26,10 +30,22 @@ export function App<TImage>({ adapters }: AppProps<TImage>) {
       </header>
 
       <div key={state.step} className="screen">
-        {state.step === 'choose' && (
+        {state.step === 'choose' && checkingFraming && (
+          <FramingCheck
+            adapters={adapters}
+            onClose={() => {
+              setCheckingFraming(false);
+            }}
+          />
+        )}
+
+        {state.step === 'choose' && !checkingFraming && (
           <ChooseClip
             onStart={(liftId, file) => {
               void start(liftId, file);
+            }}
+            onCheckFraming={() => {
+              setCheckingFraming(true);
             }}
           />
         )}
