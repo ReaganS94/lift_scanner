@@ -1,7 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MediaPipePoseEstimator } from './adapters/pose';
-import { CameraFeed, CanvasRegionReader, VideoFrameSource } from './adapters/video';
+import { CanvasRegionReader, VideoFrameSource } from './adapters/video';
 import { App } from './ui/App';
 import { UpdateNotice } from './ui/components/UpdateNotice';
 import type { AnalysisAdapters } from './ui/flow/adapters';
@@ -13,25 +13,6 @@ const adapters: AnalysisAdapters<HTMLVideoElement> = {
   createPoseEstimator: () =>
     new MediaPipePoseEstimator({ wasmBaseUrl: `${import.meta.env.BASE_URL}mediapipe/wasm` }),
   createRegionReader: () => new CanvasRegionReader(),
-  openCamera: async () => {
-    const feed = await CameraFeed.open();
-    return {
-      show: (container, className) => {
-        feed.video.className = className;
-        container.prepend(feed.video);
-        return () => {
-          feed.video.remove();
-        };
-      },
-      image: feed.video,
-      get aspectRatio() {
-        return feed.aspectRatio;
-      },
-      stop: () => {
-        feed.stop();
-      },
-    };
-  },
 };
 
 // Before any video exists, so opening the app doesn't stop music playing in another app.

@@ -340,18 +340,7 @@ says so when the angle is 20° or more. The overlay still draws the uncorrected
 poses. Tested on real clips (2026-11-05), MediaPipe's 3D world landmarks were
 not a better fix: they read 5 to 20° more bent at lockout, take phone tilt for
 torso lean, and still can't see knees behind plates. The heavy model was no
-steadier on angled bench clips.
-
-Before filming, **Check framing before you film** on the first screen opens a
-live camera preview (`ui/components/FramingCheck`, camera from
-`adapters/video/camera-feed`). It runs the pose model on the preview as fast as
-the phone allows and, every half second, judges the last second of poses with
-`view/checkFraming`: how far the camera is from the wanted view (side, or front
-or back, using the same shoulder-width estimate), whether the head and feet are
-in the picture, and whether the body spans at least 0.3 of the frame. It can
-tell how far the camera is turned but not which way, so the tips give the
-angle and leave the direction to the lifter. On iPhones the open camera pauses
-music, so it turns off as soon as the check closes. It measures only frames where the torso looks
+steadier on angled bench clips. It measures only frames where the torso looks
 full length, because leaning towards the camera shortens the torso and would
 skew the ratio. It runs on the raw poses, before cleanup drops the faint far
 side of a side view. Front and back are told apart by whether the face is

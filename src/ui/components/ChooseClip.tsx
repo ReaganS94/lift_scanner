@@ -6,12 +6,10 @@ import { APP_COMMIT, APP_VERSION } from '../version';
 
 interface ChooseClipProps {
   onStart: (liftId: string, file: File) => void;
-  /** Opens the live framing check, to set the phone up before filming. */
-  onCheckFraming: () => void;
 }
 
 /** First screen: pick the lift, then record the set or choose a video of it. */
-export function ChooseClip({ onStart, onCheckFraming }: ChooseClipProps) {
+export function ChooseClip({ onStart }: ChooseClipProps) {
   const lifts = liftRegistry.all();
   const [liftId, setLiftId] = useState(() => {
     const last = loadLastLift();
@@ -78,9 +76,6 @@ export function ChooseClip({ onStart, onCheckFraming }: ChooseClipProps) {
             Choose video
           </button>
         </div>
-        <button type="button" className="link framing-link" onClick={onCheckFraming}>
-          Check framing before you film
-        </button>
         <p className="muted hint">
           Videos recorded here may not be saved to your photos. To keep one, film with the camera
           app and use Choose video.
@@ -97,10 +92,7 @@ export function ChooseClip({ onStart, onCheckFraming }: ChooseClipProps) {
         <summary>Filming tips</summary>
         <ul>
           <li>Keep your whole body in frame for the whole set.</li>
-          <li>
-            Film from straight side-on, or straight from the front or back. Side views up to about
-            45° off are corrected for, but straight side-on gives the best results.
-          </li>
+          <li>Film from straight side-on, or straight from the front or back. Avoid 45°.</li>
           <li>Prop the phone at about hip height, a few metres away, and keep it still.</li>
           <li>
             Keep the phone level. Depth and torso angle are measured against the edges of the
