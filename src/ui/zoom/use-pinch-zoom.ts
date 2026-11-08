@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import {
   NO_ZOOM,
+  clampView,
   isZoomed,
   panBy,
   pinchView,
@@ -145,6 +146,11 @@ export function usePinchZoom(boxRef: RefObject<HTMLElement | null>): PinchZoom {
       event.preventDefault();
     };
 
+    // A resize or rotation changes the box, so keep the zoomed picture covering it.
+    const onResize = () => {
+      setView(clampView(viewRef.current, size()));
+    };
+
     const options = { passive: false };
     box.addEventListener('touchstart', onTouchStart, options);
     box.addEventListener('touchmove', onTouchMove, options);
@@ -153,6 +159,7 @@ export function usePinchZoom(boxRef: RefObject<HTMLElement | null>): PinchZoom {
     box.addEventListener('wheel', onWheel, options);
     box.addEventListener('gesturestart', stopGesture, options);
     box.addEventListener('gesturechange', stopGesture, options);
+    window.addEventListener('resize', onResize);
     return () => {
       box.removeEventListener('touchstart', onTouchStart);
       box.removeEventListener('touchmove', onTouchMove);
@@ -161,6 +168,7 @@ export function usePinchZoom(boxRef: RefObject<HTMLElement | null>): PinchZoom {
       box.removeEventListener('wheel', onWheel);
       box.removeEventListener('gesturestart', stopGesture);
       box.removeEventListener('gesturechange', stopGesture);
+      window.removeEventListener('resize', onResize);
     };
   }, [boxRef, setView]);
 
