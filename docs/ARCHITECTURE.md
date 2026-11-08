@@ -703,6 +703,12 @@ settings are in `vite.config.ts`.
   frame, draws those joints and the lines between them in the result's colour,
   and lays the result's message over the video. It clears once playback moves
   off that frame.
+- **Hiding the skeleton.** The "Skeleton" button under the results video turns
+  the drawn skeleton and bar path off, to see the lift itself. The overlay is
+  unmounted rather than hidden, so nothing is drawn while it's off. A tapped
+  result still shows its message, just without the coloured joints. The choice
+  is remembered on the device (`ui/preferences/show-skeleton.ts`). The live
+  skeleton while a clip is read has no video under it, so it has no toggle.
 
 ## Following the bar
 
