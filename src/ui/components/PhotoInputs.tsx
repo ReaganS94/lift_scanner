@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { LiftPosition } from '../../core';
 import { pickMedia } from '../platform/pick-media';
+import type { FrameScrubber } from '../flow/adapters';
 import { FramePicker } from './photo/FramePicker';
 
 interface PhotoInputsProps {
@@ -9,6 +10,7 @@ interface PhotoInputsProps {
   onChoosePosition: (positionId: string) => void;
   photo: File | null;
   onChoosePhoto: (photo: File) => void;
+  openFrameScrubber: (url: string) => Promise<FrameScrubber>;
 }
 
 /** Picture mode on the start screen: which moment of the lift, and the photo of it. */
@@ -18,6 +20,7 @@ export function PhotoInputs({
   onChoosePosition,
   photo,
   onChoosePhoto,
+  openFrameScrubber,
 }: PhotoInputsProps) {
   const chosen = positions.find((position) => position.id === positionId);
   // A video to pick a frame from, while the frame picker is open.
@@ -65,6 +68,7 @@ export function PhotoInputs({
       {video ? (
         <FramePicker
           video={video}
+          openFrameScrubber={openFrameScrubber}
           hint={chosen?.description ?? ''}
           onUse={(frame) => {
             setVideo(null);
