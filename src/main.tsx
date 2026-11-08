@@ -14,7 +14,7 @@ let poseEstimator: MediaPipePoseEstimator | null = null;
 // The one place the browser adapters are built. Everything else receives them.
 const adapters: AnalysisAdapters<FrameImage> = {
   openVideo: (url) => VideoFrameSource.open(url),
-  openFrameScrubber: (url) => VideoFrameSource.open(url),
+  openFrameScrubber: (url) => VideoFrameSource.open(url, { primeByPlaying: true }),
   openPhoto: (file) => loadPhotoImage(file),
   createPoseEstimator: () =>
     (poseEstimator ??= new MediaPipePoseEstimator({

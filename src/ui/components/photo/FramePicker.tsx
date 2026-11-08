@@ -8,7 +8,8 @@ interface FramePickerProps {
   video: File;
   /** What to look for, e.g. the position's description. */
   hint: string;
-  openFrameScrubber: (url: string) => Promise<FrameScrubber>;
+  /** The video being opened; its owner disposes it (see usePickedVideo). */
+  opening: Promise<FrameScrubber>;
   onUse: (frame: File) => void;
   onCancel: () => void;
 }
@@ -32,7 +33,7 @@ const UNREADABLE = "This video couldn't be read. Try an MP4 or MOV recorded on y
  * than shown in a video element: iPhone Safari leaves a video element black until it has
  * played. The canvas is also exactly what gets checked.
  */
-export function FramePicker({ video, hint, openFrameScrubber, onUse, onCancel }: FramePickerProps) {
+export function FramePicker({ video, hint, opening, onUse, onCancel }: FramePickerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [scrubber, setScrubber] = useState<FrameScrubber | null>(null);
   const [frame, setFrame] = useState(0);
@@ -44,17 +45,10 @@ export function FramePicker({ video, hint, openFrameScrubber, onUse, onCancel }:
   const drawing = useRef(false);
 
   useEffect(() => {
-    const url = URL.createObjectURL(video);
     let cancelled = false;
-    let opened: FrameScrubber | null = null;
-    openFrameScrubber(url).then(
+    opening.then(
       (result) => {
-        if (cancelled) {
-          result.dispose();
-          return;
-        }
-        opened = result;
-        setScrubber(result);
+        if (!cancelled) setScrubber(result);
       },
       (e: unknown) => {
         if (!cancelled) setError(e instanceof Error ? e.message : `${UNREADABLE} (${String(e)})`);
@@ -62,10 +56,8 @@ export function FramePicker({ video, hint, openFrameScrubber, onUse, onCancel }:
     );
     return () => {
       cancelled = true;
-      opened?.dispose();
-      URL.revokeObjectURL(url);
     };
-  }, [video, openFrameScrubber]);
+  }, [opening]);
 
   const draw = useCallback(async () => {
     const canvas = canvasRef.current;
