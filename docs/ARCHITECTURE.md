@@ -537,7 +537,12 @@ frame"). The picker draws each frame on a canvas with `VideoFrameSource.drawFram
 the same seek-and-wait reader the whole-set analysis uses, and "Use this frame"
 saves that canvas as a JPEG (`ui/platform/canvasToFile`), which is then checked
 exactly like a photo. A `<video>` element isn't used: on an iPhone (iOS 26) it
-stayed black, and with a `#t=0.001` media fragment it failed to load at all. The
+stayed black, and with a `#t=0.001` media fragment it failed to load at all. Even on a
+canvas, a plain 2D `drawImage` of an iPhone video drew only black there (likely its HDR
+video), while the pose model, which reads frames through WebGL, saw them fine. So
+`adapters/video/VideoFrameDrawer` draws with 2D first and, if the result is all black
+(`looksBlack`), switches to drawing through WebGL for the rest of the video. The bar
+tracker's `CanvasRegionReader` still uses 2D `drawImage` and may hit the same problem. The
 picker steps at 30 frames a second, so on a 60 fps clip each step skips a frame.
 
 A photo goes through the same steps as a clip of one frame
