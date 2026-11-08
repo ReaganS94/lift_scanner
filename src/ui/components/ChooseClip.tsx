@@ -91,7 +91,7 @@ export function ChooseClip({ onStart, onStartPhoto, openFrameScrubber }: ChooseC
               setMode(option);
             }}
           >
-            {option === 'video' ? 'Whole set' : 'One photo'}
+            {option === 'video' ? 'All reps' : 'One position'}
           </button>
         ))}
       </div>
@@ -172,7 +172,7 @@ export function ChooseClip({ onStart, onStartPhoto, openFrameScrubber }: ChooseC
       )}
 
       <button type="submit" className="primary" disabled={!ready}>
-        {photoMode ? 'Check photo' : 'Analyse set'}
+        {photoMode ? 'Check position' : 'Analyse set'}
       </button>
       <p className="muted">
         The {photoMode ? 'photo' : 'video'} is processed on this device and never uploaded.
