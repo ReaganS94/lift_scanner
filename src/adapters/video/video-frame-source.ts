@@ -151,8 +151,9 @@ function waitForEvent(
     };
     const onError = () => {
       cleanUp();
-      const code = video.error?.code;
-      reject(new Error(`${UNREADABLE} (${step}${code ? `, media error ${code}` : ''})`));
+      const { code, message } = video.error ?? {};
+      const detail = code ? `, media error ${code}${message ? `: ${message}` : ''}` : '';
+      reject(new Error(`${UNREADABLE} (${step}${detail})`));
     };
     const timer = setTimeout(() => {
       cleanUp();
