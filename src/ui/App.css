@@ -424,6 +424,46 @@ progress::-moz-progress-bar {
   gap: 0.25rem;
 }
 
+/* A portrait video, capped in height, leaves an empty band beside it on a phone. The buttons
+   go in that band, with the scrub bar under both, so the pinned player takes less of the
+   screen from the results. */
+.player--side {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 9.5rem;
+  grid-template-areas:
+    'video buttons'
+    'scrub scrub';
+  column-gap: 0.75rem;
+}
+
+.player--side .video-frame {
+  grid-area: video;
+}
+
+/* The controls' parts join the player's grid. */
+.player--side .playback {
+  display: contents;
+}
+
+.player--side .playback__scrub {
+  grid-area: scrub;
+}
+
+.player--side .playback__buttons {
+  grid-area: buttons;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  justify-content: center;
+}
+
+.player--side .playback__group button {
+  flex: 1;
+}
+
+.player--side .playback__group--toggles {
+  flex-direction: column;
+}
+
 .playback__scrub {
   display: flex;
   align-items: center;

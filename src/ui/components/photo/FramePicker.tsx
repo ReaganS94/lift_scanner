@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { formatSeconds, seekTimeOfFrame, timeOfFrame } from '../../playback/frames';
+import { playerClassName, videoFrameStyle } from '../../playback/player-layout';
 import { usePlayback } from '../../playback/use-playback';
 import { captureFrame } from '../../platform/capture-frame';
 import { PlaybackControls } from '../results/PlaybackControls';
@@ -59,17 +60,10 @@ export function FramePicker({ video, hint, onUse, onCancel }: FramePickerProps) 
     <div className="stack stack--tight">
       <span className="field-label">Pick the frame</span>
       <p className="muted hint">{hint} Step a frame at a time with ‹ and › to get it exact.</p>
-      <div className="player">
+      <div className={shape ? playerClassName(shape.aspectRatio) : 'player'}>
         <div
           className="video-frame"
-          style={
-            shape
-              ? {
-                  aspectRatio: String(shape.aspectRatio),
-                  width: `min(100%, calc(${VIDEO_MAX_HEIGHT} * ${String(shape.aspectRatio)}))`,
-                }
-              : undefined
-          }
+          style={shape ? videoFrameStyle(shape.aspectRatio, VIDEO_MAX_HEIGHT) : undefined}
         >
           <video
             ref={videoRef}

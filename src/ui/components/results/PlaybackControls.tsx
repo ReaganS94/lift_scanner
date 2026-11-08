@@ -94,7 +94,7 @@ export function PlaybackControls({
         </div>
 
         {(loop ?? skeleton) && (
-          <div className="playback__group">
+          <div className="playback__group playback__group--toggles">
             {loop && (
               <button
                 type="button"
