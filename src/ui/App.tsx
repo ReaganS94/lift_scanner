@@ -48,6 +48,7 @@ export function App<TImage>({ adapters }: AppProps<TImage>) {
             onStartPhoto={(liftId, positionId, file) => {
               void photo.start(liftId, positionId, file);
             }}
+            openFrameScrubber={adapters.openFrameScrubber}
           />
         )}
 

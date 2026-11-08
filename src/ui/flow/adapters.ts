@@ -5,6 +5,17 @@ export interface DisposableFrameSource<TImage> extends FrameSource<TImage> {
   dispose(): void;
 }
 
+/** Shows any one frame of a video, for picking the frame to check as a photo. */
+export interface FrameScrubber {
+  /** Total length of the clip, in milliseconds. */
+  readonly durationMs: number;
+  /** The video's width divided by its height. */
+  readonly aspectRatio: number;
+  /** Draws the frame at a time on a canvas, sized to the video but no bigger than given. */
+  drawFrameAt(timeMs: number, canvas: HTMLCanvasElement, maxSidePixels: number): Promise<void>;
+  dispose(): void;
+}
+
 /** A photo the screens can show and release when finished with. */
 export interface OpenedPhoto<TImage> {
   /** The photo as the pose model reads it. */
@@ -22,6 +33,8 @@ export interface OpenedPhoto<TImage> {
  */
 export interface AnalysisAdapters<TImage> {
   openVideo(url: string): Promise<DisposableFrameSource<TImage>>;
+  /** Opens a video for picking one frame of it. The caller owns the URL. */
+  readonly openFrameScrubber: (url: string) => Promise<FrameScrubber>;
   /** Reads a photo file, upright. */
   openPhoto(file: Blob): Promise<OpenedPhoto<TImage>>;
   /**

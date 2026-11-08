@@ -61,6 +61,28 @@ export class VideoFrameSource implements FrameSource<HTMLVideoElement> {
     }
   }
 
+  /**
+   * Seeks to a time and draws that frame on a canvas, at most `maxSidePixels` on its longer
+   * side. For picking one frame: it uses the same seek-and-wait as analysis, which works on
+   * iPhones, where a video shown in the page stays black until it has played.
+   */
+  async drawFrameAt(
+    timeMs: number,
+    canvas: HTMLCanvasElement,
+    maxSidePixels: number,
+  ): Promise<void> {
+    await this.seek(timeMs / 1000 + SEEK_NUDGE_SECONDS);
+    const { video } = this;
+    const scale = Math.min(1, maxSidePixels / Math.max(video.videoWidth, video.videoHeight, 1));
+    const width = Math.max(1, Math.round(video.videoWidth * scale));
+    const height = Math.max(1, Math.round(video.videoHeight * scale));
+    if (canvas.width !== width) canvas.width = width;
+    if (canvas.height !== height) canvas.height = height;
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error("This frame couldn't be read from the video.");
+    context.drawImage(video, 0, 0, width, height);
+  }
+
   dispose(): void {
     this.video.removeAttribute('src');
     this.video.load();

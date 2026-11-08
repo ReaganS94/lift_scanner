@@ -1,6 +1,7 @@
 import { useState, type SubmitEvent } from 'react';
 import { liftRegistry } from '../../lifts';
 import { pickMedia } from '../platform/pick-media';
+import type { FrameScrubber } from '../flow/adapters';
 import { PhotoInputs } from './PhotoInputs';
 import { loadLastLift, saveLastLift } from '../preferences/last-lift';
 import { APP_COMMIT, APP_VERSION } from '../version';
@@ -9,6 +10,8 @@ interface ChooseClipProps {
   onStart: (liftId: string, file: File) => void;
   /** Picture mode: check one moment of the lift from a photo. */
   onStartPhoto: (liftId: string, positionId: string, photo: File) => void;
+  /** Opens a video for picking one frame of it as the photo. */
+  openFrameScrubber: (url: string) => Promise<FrameScrubber>;
 }
 
 type Mode = 'video' | 'photo';
@@ -17,7 +20,7 @@ type Mode = 'video' | 'photo';
  * First screen: pick the lift, then record the set or choose a video of it. In picture mode,
  * pick a moment of the lift and a photo of it instead.
  */
-export function ChooseClip({ onStart, onStartPhoto }: ChooseClipProps) {
+export function ChooseClip({ onStart, onStartPhoto, openFrameScrubber }: ChooseClipProps) {
   const lifts = liftRegistry.all();
   const [liftId, setLiftId] = useState(() => {
     const last = loadLastLift();
@@ -95,6 +98,7 @@ export function ChooseClip({ onStart, onStartPhoto }: ChooseClipProps) {
 
       {photoMode ? (
         <PhotoInputs
+          openFrameScrubber={openFrameScrubber}
           positions={positions}
           positionId={positionId}
           onChoosePosition={(id) => {

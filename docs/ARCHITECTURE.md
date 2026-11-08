@@ -533,12 +533,12 @@ Picture mode checks one moment of a lift from a single photo, such as the bottom
 of a squat, instead of a whole set. The user picks the lift, then the moment (a
 `LiftPosition`), then takes or chooses a photo, or picks one frame from a video
 (`ui/components/photo/FramePicker`: scrub, step a frame at a time, "Use this
-frame"). A picked frame is captured as a JPEG (`ui/platform/captureFrame`) and
-from then on is checked exactly like a photo. The picker steps at 30 frames a
-second, so on a 60 fps clip each step skips a frame. iPhone Safari shows a
-paused video it hasn't played as black, so the picker loads it with a `#t=0.001`
-media fragment and seeks once it knows the length; `captureFrame` waits for any
-seek in progress, since Safari otherwise draws the previous or a black frame.
+frame"). The picker draws each frame on a canvas with `VideoFrameSource.drawFrameAt`,
+the same seek-and-wait reader the whole-set analysis uses, and "Use this frame"
+saves that canvas as a JPEG (`ui/platform/canvasToFile`), which is then checked
+exactly like a photo. A `<video>` element isn't used: on an iPhone (iOS 26) it
+stayed black, and with a `#t=0.001` media fragment it failed to load at all. The
+picker steps at 30 frames a second, so on a 60 fps clip each step skips a frame.
 
 A photo goes through the same steps as a clip of one frame
 (`analysis/photoAsClip`): `prepareClip` picks the lifter (the biggest person in
