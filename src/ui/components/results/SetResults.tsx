@@ -180,16 +180,20 @@ export function SetResults({
           playback={playback}
           sampleFps={report.sampleFps}
           frameCount={sequence.frames.length}
-          loopRepNumber={selected ? selected.rep.index + 1 : null}
-          looping={looping}
-          onToggleLoop={() => {
-            setLooping((on) => !on);
+          loop={{
+            repNumber: selected ? selected.rep.index + 1 : null,
+            on: looping,
+            onToggle: () => {
+              setLooping((on) => !on);
+            },
           }}
-          showSkeleton={showSkeleton}
-          onToggleSkeleton={() => {
-            const show = !showSkeleton;
-            setShowSkeleton(show);
-            saveShowSkeleton(show);
+          skeleton={{
+            on: showSkeleton,
+            onToggle: () => {
+              const show = !showSkeleton;
+              setShowSkeleton(show);
+              saveShowSkeleton(show);
+            },
           }}
         />
       </div>

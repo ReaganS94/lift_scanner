@@ -805,3 +805,7 @@ progress::-moz-progress-bar {
   background: #000;
   border-radius: var(--radius);
 }
+
+.file-buttons--three {
+  grid-template-columns: 1fr 1fr 1fr;
+}

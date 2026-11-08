@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import type { LiftPosition } from '../../core';
 import { pickMedia } from '../platform/pick-media';
+import { FramePicker } from './photo/FramePicker';
 
 interface PhotoInputsProps {
   positions: readonly LiftPosition[];
@@ -18,9 +20,16 @@ export function PhotoInputs({
   onChoosePhoto,
 }: PhotoInputsProps) {
   const chosen = positions.find((position) => position.id === positionId);
+  // A video to pick a frame from, while the frame picker is open.
+  const [video, setVideo] = useState<File | null>(null);
   const pick = (source: 'camera' | 'library') => {
     void pickMedia('photo', source).then((picked) => {
       if (picked) onChoosePhoto(picked);
+    });
+  };
+  const pickVideo = () => {
+    void pickMedia('video', 'library').then((picked) => {
+      if (picked) setVideo(picked);
     });
   };
 
@@ -53,35 +62,52 @@ export function PhotoInputs({
         {chosen && <p className="muted hint">{chosen.description}</p>}
       </div>
 
-      <div className="stack stack--tight">
-        <span className="field-label">Photo of that moment</span>
-        <div className="file-buttons">
-          <button
-            type="button"
-            className="file-button"
-            onClick={() => {
-              pick('camera');
-            }}
-          >
-            Take photo
-          </button>
-          <button
-            type="button"
-            className="file-button"
-            onClick={() => {
-              pick('library');
-            }}
-          >
-            Choose photo
-          </button>
+      {video ? (
+        <FramePicker
+          video={video}
+          hint={chosen?.description ?? ''}
+          onUse={(frame) => {
+            setVideo(null);
+            onChoosePhoto(frame);
+          }}
+          onCancel={() => {
+            setVideo(null);
+          }}
+        />
+      ) : (
+        <div className="stack stack--tight">
+          <span className="field-label">Photo of that moment</span>
+          <div className="file-buttons file-buttons--three">
+            <button
+              type="button"
+              className="file-button"
+              onClick={() => {
+                pick('camera');
+              }}
+            >
+              Take photo
+            </button>
+            <button
+              type="button"
+              className="file-button"
+              onClick={() => {
+                pick('library');
+              }}
+            >
+              Choose photo
+            </button>
+            <button type="button" className="file-button" onClick={pickVideo}>
+              From a video
+            </button>
+          </div>
+          {photo && (
+            <p className="chosen-file">
+              <span aria-hidden="true">✓ </span>
+              {photo.name}
+            </p>
+          )}
         </div>
-        {photo && (
-          <p className="chosen-file">
-            <span aria-hidden="true">✓ </span>
-            {photo.name}
-          </p>
-        )}
-      </div>
+      )}
 
       <details className="tips">
         <summary>Photo tips</summary>

@@ -5,13 +5,15 @@ interface PlaybackControlsProps {
   playback: Playback;
   sampleFps: number;
   frameCount: number;
-  /** The rep that "Loop" repeats, shown as its number. Null when no rep is selected. */
-  loopRepNumber: number | null;
-  looping: boolean;
-  onToggleLoop: () => void;
-  /** Whether the skeleton (and bar path) is drawn over the video. */
-  showSkeleton: boolean;
-  onToggleSkeleton: () => void;
+  /** Looping a rep. Left out where there are no reps, e.g. when picking a frame. */
+  loop?: {
+    /** The rep that "Loop" repeats, shown as its number. Null when no rep is selected. */
+    readonly repNumber: number | null;
+    readonly on: boolean;
+    readonly onToggle: () => void;
+  };
+  /** Showing the skeleton (and bar path) over the video. Left out where there is none. */
+  skeleton?: { readonly on: boolean; readonly onToggle: () => void };
 }
 
 /**
@@ -22,11 +24,8 @@ export function PlaybackControls({
   playback,
   sampleFps,
   frameCount,
-  loopRepNumber,
-  looping,
-  onToggleLoop,
-  showSkeleton,
-  onToggleSkeleton,
+  loop,
+  skeleton,
 }: PlaybackControlsProps) {
   const lastFrame = Math.max(frameCount - 1, 0);
   return (
@@ -94,27 +93,33 @@ export function PlaybackControls({
           ))}
         </div>
 
-        <div className="playback__group">
-          <button
-            type="button"
-            aria-pressed={looping}
-            className={looping ? 'selected' : ''}
-            disabled={loopRepNumber === null}
-            aria-label={loopRepNumber === null ? 'Loop' : `Loop rep ${String(loopRepNumber)}`}
-            onClick={onToggleLoop}
-          >
-            ⟲ Loop
-          </button>
-          <button
-            type="button"
-            aria-pressed={showSkeleton}
-            className={showSkeleton ? 'selected' : ''}
-            aria-label="Show skeleton"
-            onClick={onToggleSkeleton}
-          >
-            Skeleton
-          </button>
-        </div>
+        {(loop ?? skeleton) && (
+          <div className="playback__group">
+            {loop && (
+              <button
+                type="button"
+                aria-pressed={loop.on}
+                className={loop.on ? 'selected' : ''}
+                disabled={loop.repNumber === null}
+                aria-label={loop.repNumber === null ? 'Loop' : `Loop rep ${String(loop.repNumber)}`}
+                onClick={loop.onToggle}
+              >
+                ⟲ Loop
+              </button>
+            )}
+            {skeleton && (
+              <button
+                type="button"
+                aria-pressed={skeleton.on}
+                className={skeleton.on ? 'selected' : ''}
+                aria-label="Show skeleton"
+                onClick={skeleton.onToggle}
+              >
+                Skeleton
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
