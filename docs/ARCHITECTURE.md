@@ -542,7 +542,12 @@ canvas, a plain 2D `drawImage` of an iPhone video drew only black there (likely 
 video), while the pose model, which reads frames through WebGL, saw them fine. So
 `adapters/video/VideoFrameDrawer` draws with 2D first and, if the result is all black
 (`looksBlack`), switches to drawing through WebGL for the rest of the video. The bar
-tracker's `CanvasRegionReader` still uses 2D `drawImage` and may hit the same problem. The
+tracker's `CanvasRegionReader` still uses 2D `drawImage` and may hit the same problem.
+Opening the video from inside the picker, a render after it was picked, timed out on the
+iPhone ("opening timed out") while the same file opened fine for whole-set analysis, which
+opens it straight after the pick. So the picker's video is opened the moment it's picked
+(`usePickedVideo`), and `VideoFrameSource.open(url, { primeByPlaying: true })` plays it,
+muted, for a moment before reading so the phone loads and decodes its pictures. The
 picker steps at 30 frames a second, so on a 60 fps clip each step skips a frame.
 
 A photo goes through the same steps as a clip of one frame

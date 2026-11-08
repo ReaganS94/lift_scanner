@@ -1,8 +1,8 @@
-import { useState } from 'react';
 import type { LiftPosition } from '../../core';
 import { pickMedia } from '../platform/pick-media';
 import type { FrameScrubber } from '../flow/adapters';
 import { FramePicker } from './photo/FramePicker';
+import { usePickedVideo } from './photo/use-picked-video';
 
 interface PhotoInputsProps {
   positions: readonly LiftPosition[];
@@ -24,7 +24,7 @@ export function PhotoInputs({
 }: PhotoInputsProps) {
   const chosen = positions.find((position) => position.id === positionId);
   // A video to pick a frame from, while the frame picker is open.
-  const [video, setVideo] = useState<File | null>(null);
+  const { video, open: openVideo, close: closeVideo } = usePickedVideo(openFrameScrubber);
   const pick = (source: 'camera' | 'library') => {
     void pickMedia('photo', source).then((picked) => {
       if (picked) onChoosePhoto(picked);
@@ -32,7 +32,7 @@ export function PhotoInputs({
   };
   const pickVideo = () => {
     void pickMedia('video', 'library').then((picked) => {
-      if (picked) setVideo(picked);
+      if (picked) openVideo(picked);
     });
   };
 
@@ -67,16 +67,14 @@ export function PhotoInputs({
 
       {video ? (
         <FramePicker
-          video={video}
-          openFrameScrubber={openFrameScrubber}
+          video={video.file}
+          opening={video.opening}
           hint={chosen?.description ?? ''}
           onUse={(frame) => {
-            setVideo(null);
+            closeVideo();
             onChoosePhoto(frame);
           }}
-          onCancel={() => {
-            setVideo(null);
-          }}
+          onCancel={closeVideo}
         />
       ) : (
         <div className="stack stack--tight">

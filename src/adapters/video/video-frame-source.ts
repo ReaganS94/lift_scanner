@@ -4,6 +4,8 @@ import { VideoFrameDrawer } from './video-frame-drawer';
 /** Loading a picked file is local, so this only trips if the browser can't decode it. */
 const LOAD_TIMEOUT_MS = 15_000;
 const SEEK_TIMEOUT_MS = 5_000;
+/** How long a brief play (see open) may take to start before reading goes ahead anyway. */
+const PLAY_TIMEOUT_MS = 3_000;
 /** How long to wait for the new frame to be shown after a seek. */
 const FRAME_SHOWN_TIMEOUT_MS = 500;
 /**
@@ -33,8 +35,15 @@ export class VideoFrameSource implements FrameSource<HTMLVideoElement> {
   /**
    * Loads a video from a URL, such as an object URL for a file the user picked. The caller
    * owns the URL. Call dispose() when finished with the frame source.
+   *
+   * `primeByPlaying` plays the video, muted, for a moment before reading it. An iPhone opened
+   * from the frame picker never loaded the picture data of a video that hadn't played ("opening
+   * timed out"), or drew it black.
    */
-  static async open(src: string): Promise<VideoFrameSource> {
+  static async open(
+    src: string,
+    options: { primeByPlaying?: boolean } = {},
+  ): Promise<VideoFrameSource> {
     const video = document.createElement('video');
     // Muted as an attribute and a property, before the source is set, so iOS never treats it
     // as a sound that should pause music in other apps.
@@ -43,7 +52,13 @@ export class VideoFrameSource implements FrameSource<HTMLVideoElement> {
     video.playsInline = true; // iOS would otherwise insist on fullscreen
     video.preload = 'auto';
     video.src = src;
-    await waitForEvent(video, 'loadeddata', 'opening', LOAD_TIMEOUT_MS, UNREADABLE);
+    if (options.primeByPlaying) {
+      await waitForEvent(video, 'loadedmetadata', 'opening', LOAD_TIMEOUT_MS, UNREADABLE);
+      await playBriefly(video);
+    }
+    if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+      await waitForEvent(video, 'loadeddata', 'opening', LOAD_TIMEOUT_MS, UNREADABLE);
+    }
     return new VideoFrameSource(video);
   }
 
@@ -113,6 +128,25 @@ export class VideoFrameSource implements FrameSource<HTMLVideoElement> {
   }
 }
 
+/**
+ * Starts the muted video and pauses it again, so the browser loads and decodes its pictures.
+ * Muted inline playback needs no tap. If the browser refuses or stalls, reading carries on
+ * and fails, if it must, with its own message.
+ */
+async function playBriefly(video: HTMLVideoElement): Promise<void> {
+  try {
+    await Promise.race([video.play(), delay(PLAY_TIMEOUT_MS)]);
+  } catch {
+    // Refused: carry on without it.
+  } finally {
+    video.pause();
+  }
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /** Resolves true once the video shows a new frame, or false if it can't tell in time. */
 function waitForFrameShown(video: HTMLVideoElement): Promise<boolean> {
   if (!('requestVideoFrameCallback' in video)) return Promise.resolve(false);
@@ -134,7 +168,7 @@ function waitForFrameShown(video: HTMLVideoElement): Promise<boolean> {
  */
 function waitForEvent(
   video: HTMLVideoElement,
-  event: 'loadeddata' | 'seeked',
+  event: 'loadedmetadata' | 'loadeddata' | 'seeked',
   step: 'opening' | 'seeking',
   timeoutMs: number,
   failureMessage: string,
