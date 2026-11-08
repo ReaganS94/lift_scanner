@@ -5,12 +5,19 @@ import { viewLabel } from '../flow/analysis-flow';
 
 interface ConfirmViewProps {
   prepared: PreparedClip;
+  /** What the pose came from, for the wording. */
+  media?: 'video' | 'photo';
   onConfirm: (view: View) => void;
   onStartOver: () => void;
 }
 
 /** The app's guess at the camera view, for the user to confirm or correct before analysis. */
-export function ConfirmView({ prepared, onConfirm, onStartOver }: ConfirmViewProps) {
+export function ConfirmView({
+  prepared,
+  media = 'video',
+  onConfirm,
+  onStartOver,
+}: ConfirmViewProps) {
   const { viewGuess, torsoLength } = prepared;
   const [view, setView] = useState<View | null>(viewGuess.view);
 
@@ -18,11 +25,11 @@ export function ConfirmView({ prepared, onConfirm, onStartOver }: ConfirmViewPro
     return (
       <div className="stack">
         <p>
-          No lifter was found clearly enough in this video. Make sure your whole body is in frame
+          No lifter was found clearly enough in this {media}. Make sure your whole body is in frame
           and well lit.
         </p>
         <button type="button" className="primary" onClick={onStartOver}>
-          Try another video
+          Try another {media}
         </button>
       </div>
     );

@@ -3,6 +3,7 @@ import { depth } from './checks/depth';
 import { kneesCaving } from './checks/knees-caving';
 import { torsoAngle } from './checks/torso-angle';
 import { squatRepSignal } from './rep-signal';
+import { squatBottomPosition } from './positions/bottom';
 
 export const squat: LiftDefinition = {
   id: 'squat',
@@ -15,4 +16,5 @@ export const squat: LiftDefinition = {
     minDurationSeconds: 0.8,
   },
   checks: [depth, torsoAngle, kneesCaving],
+  positions: [squatBottomPosition],
 };

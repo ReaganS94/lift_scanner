@@ -2,19 +2,22 @@
 let abandonPrevious: (() => void) | null = null;
 
 /**
- * Asks for a video and resolves with it, or null if the user backs out. `camera` opens the
- * phone's camera to record one; `library` offers the photo library and files.
+ * Asks for a video or photo and resolves with it, or null if the user backs out. `camera`
+ * opens the phone's camera to take one; `library` offers the photo library and files.
  *
  * The file input is made only when asked for, never left in the page. On iOS home-screen apps,
  * a video file input sitting in the page can turn the camera on as soon as the app opens (the
  * green dot), which also pauses music playing in other apps.
  */
-export function pickVideo(source: 'camera' | 'library'): Promise<File | null> {
+export function pickMedia(
+  kind: 'video' | 'photo',
+  source: 'camera' | 'library',
+): Promise<File | null> {
   abandonPrevious?.();
   return new Promise((resolve) => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = 'video/*';
+    input.accept = kind === 'video' ? 'video/*' : 'image/*';
     if (source === 'camera') input.setAttribute('capture', 'environment');
     input.hidden = true;
 

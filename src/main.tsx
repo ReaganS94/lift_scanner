@@ -1,17 +1,24 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { loadPhotoImage } from './adapters/photo';
 import { MediaPipePoseEstimator } from './adapters/pose';
-import { CanvasRegionReader, VideoFrameSource } from './adapters/video';
+import { CanvasRegionReader, VideoFrameSource, type FrameImage } from './adapters/video';
 import { App } from './ui/App';
 import { UpdateNotice } from './ui/components/UpdateNotice';
 import type { AnalysisAdapters } from './ui/flow/adapters';
 import { letOtherAudioKeepPlaying } from './ui/platform/audio-session';
 
+// One pose model for videos and photos, loaded the first time either needs it.
+let poseEstimator: MediaPipePoseEstimator | null = null;
+
 // The one place the browser adapters are built. Everything else receives them.
-const adapters: AnalysisAdapters<HTMLVideoElement> = {
+const adapters: AnalysisAdapters<FrameImage> = {
   openVideo: (url) => VideoFrameSource.open(url),
+  openPhoto: (file) => loadPhotoImage(file),
   createPoseEstimator: () =>
-    new MediaPipePoseEstimator({ wasmBaseUrl: `${import.meta.env.BASE_URL}mediapipe/wasm` }),
+    (poseEstimator ??= new MediaPipePoseEstimator({
+      wasmBaseUrl: `${import.meta.env.BASE_URL}mediapipe/wasm`,
+    })),
   createRegionReader: () => new CanvasRegionReader(),
 };
 

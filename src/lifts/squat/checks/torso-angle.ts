@@ -35,19 +35,29 @@ export const torsoAngle: FormCheck = {
       };
     }
 
-    const degrees = Math.round(lean);
-    const measured = { checkId: ID, value: lean, frameIndex: bottom.frameIndex };
-    if (degrees <= PASS_UP_TO_DEGREES) {
-      return {
-        ...measured,
-        status: 'pass',
-        message: `Torso leaned ${String(degrees)}° forward at the bottom.`,
-      };
-    }
     return {
-      ...measured,
-      status: 'warn',
-      message: `Torso leaned ${String(degrees)}° forward at the bottom, more than usual.`,
+      checkId: ID,
+      value: lean,
+      frameIndex: bottom.frameIndex,
+      ...torsoLeanVerdict(lean, 'at the bottom'),
     };
   },
 };
+
+/**
+ * How a torso lean is judged, in degrees from vertical. Shared with the squat bottom photo
+ * check; `when` ends the message, e.g. 'at the bottom'.
+ */
+export function torsoLeanVerdict(
+  lean: number,
+  when: string,
+): { status: 'pass' | 'warn'; message: string } {
+  const degrees = Math.round(lean);
+  if (degrees <= PASS_UP_TO_DEGREES) {
+    return { status: 'pass', message: `Torso leaned ${String(degrees)}° forward ${when}.` };
+  }
+  return {
+    status: 'warn',
+    message: `Torso leaned ${String(degrees)}° forward ${when}, more than usual.`,
+  };
+}

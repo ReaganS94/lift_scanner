@@ -1,5 +1,5 @@
 import { FilesetResolver } from '@mediapipe/tasks-vision';
-import type { PoseEstimator, PoseFrame, SampledFrame } from '../../core';
+import type { PoseEstimator, PoseFrame, SampledFrame, StillPoseEstimator } from '../../core';
 import {
   createPoseModels,
   DEFAULT_POSE_MODEL_URL,
@@ -28,7 +28,9 @@ const FIND_EVERY_FRAMES = 5;
  * finder also looks for everyone (see PoseModels). All of them go in PoseFrame.people, and
  * people/pickLifter later works out which is the lifter.
  */
-export class MediaPipePoseEstimator implements PoseEstimator<TexImageSource> {
+export class MediaPipePoseEstimator
+  implements PoseEstimator<TexImageSource>, StillPoseEstimator<TexImageSource>
+{
   private readonly options: MediaPipePoseEstimatorOptions;
   private fileset: Fileset | null = null;
   private models: PoseModels | null = null;
@@ -75,20 +77,21 @@ export class MediaPipePoseEstimator implements PoseEstimator<TexImageSource> {
     const find = this.clipFrames % FIND_EVERY_FRAMES === 0;
     this.clipFrames += 1;
 
-    let people;
-    try {
-      people = this.look(frame.image, find);
-    } catch (error) {
-      // Some GPU problems only show up on the first frame rather than at start-up.
-      if (this.requireModels().delegate !== 'GPU' || this.gpuProven) throw error;
-      this.models?.close();
-      this.models = await this.create('CPU');
-      people = this.look(frame.image, find);
-    }
-    if (this.requireModels().delegate === 'GPU') this.gpuProven = true;
-
+    const people = await this.withCpuFallback(() => this.look(frame.image, find));
     const shared = people.map((pose) => toSharedUnits(pose, aspectRatio));
     return { timeMs: frame.timeMs, landmarks: shared[0] ?? null, people: shared };
+  }
+
+  /**
+   * One photo: only the finder looks, since there's nothing to track from. It doesn't touch the
+   * tracker's timestamps, so a video analysed afterwards is unaffected.
+   */
+  async estimateStill(image: TexImageSource, aspectRatio: number): Promise<PoseFrame> {
+    const people = await this.withCpuFallback(
+      () => this.requireModels().finder.detect(image).landmarks,
+    );
+    const shared = people.map((pose) => toSharedUnits(pose, aspectRatio));
+    return { timeMs: 0, landmarks: shared[0] ?? null, people: shared };
   }
 
   dispose(): void {
@@ -106,6 +109,22 @@ export class MediaPipePoseEstimator implements PoseEstimator<TexImageSource> {
     const { tracker, finder } = this.requireModels();
     const tracked = tracker.detectForVideo(image, this.lastTimestampMs).landmarks;
     return find ? [...tracked, ...finder.detect(image).landmarks] : tracked;
+  }
+
+  /** Runs the models, moving to the CPU if the GPU fails before it has ever worked. */
+  private async withCpuFallback<T>(run: () => T): Promise<T> {
+    let result: T;
+    try {
+      result = run();
+    } catch (error) {
+      // Some GPU problems only show up on the first frame rather than at start-up.
+      if (this.requireModels().delegate !== 'GPU' || this.gpuProven) throw error;
+      this.models?.close();
+      this.models = await this.create('CPU');
+      result = run();
+    }
+    if (this.requireModels().delegate === 'GPU') this.gpuProven = true;
+    return result;
   }
 
   private async load(): Promise<void> {

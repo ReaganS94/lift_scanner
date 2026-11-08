@@ -1,24 +1,27 @@
 import type { FrameRegion, GrayImage, RegionReader } from '../../core';
 
+/** The pictures the app reads: video frames, and photos drawn on a canvas. */
+export type FrameImage = HTMLVideoElement | HTMLCanvasElement;
+
 /**
- * Reads part of a video frame through a canvas. One canvas is reused for every frame, since
- * creating one per frame is slow on phones.
+ * Reads part of a video frame or photo through a canvas. One canvas is reused for every frame,
+ * since creating one per frame is slow on phones.
  */
-export class CanvasRegionReader implements RegionReader<HTMLVideoElement> {
+export class CanvasRegionReader implements RegionReader<FrameImage> {
   private readonly canvas = document.createElement('canvas');
   private context: CanvasRenderingContext2D | null = null;
 
-  read(video: HTMLVideoElement, region: FrameRegion, pixelsPerUnit: number): GrayImage {
+  read(image: FrameImage, region: FrameRegion, pixelsPerUnit: number): GrayImage {
     const width = Math.max(1, Math.round(region.width * pixelsPerUnit));
     const height = Math.max(1, Math.round(region.height * pixelsPerUnit));
     const context = this.contextOfSize(width, height);
 
     // The shared unit is the frame's height, on both axes.
-    const unit = video.videoHeight;
+    const unit = image instanceof HTMLVideoElement ? image.videoHeight : image.height;
     context.fillStyle = '#000';
     context.fillRect(0, 0, width, height);
     context.drawImage(
-      video,
+      image,
       region.x * unit,
       region.y * unit,
       region.width * unit,

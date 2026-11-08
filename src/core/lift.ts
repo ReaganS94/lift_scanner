@@ -1,4 +1,5 @@
 import type { ClipContext, FormCheck } from './check';
+import type { LiftPosition } from './position';
 import type { RepDetectionOptions } from './rep';
 import type { View } from './view';
 
@@ -28,4 +29,6 @@ export interface LiftDefinition {
   readonly followsBar?: boolean;
   /** Filming advice for this lift, shown after the general tips. Each entry is one sentence or two. */
   readonly filmingTips?: readonly string[];
+  /** Moments of the lift that can be checked from a single photo. Absent when there are none. */
+  readonly positions?: readonly LiftPosition[];
 }

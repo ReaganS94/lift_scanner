@@ -183,4 +183,20 @@ describe('MediaPipePoseEstimator', () => {
     const first = await estimator.estimate({ timeMs: 33, image: IMAGE }, 0.5);
     expect(first.landmarks?.[0]?.x).toBe(0.25);
   });
+
+  it('finds everyone in a photo with the finder alone, leaving the tracker untouched', async () => {
+    const { tracker, finder } = fakeModels();
+    finder.detect.mockReturnValue({ landmarks: [person(0.5), person(0.25)] });
+    const estimator = newEstimator();
+    await estimator.init();
+
+    const pose = await estimator.estimateStill(IMAGE, 0.5);
+    expect(pose.people).toHaveLength(2);
+    expect(pose.landmarks?.[0]?.x).toBe(0.25);
+    expect(tracker.detectForVideo).not.toHaveBeenCalled();
+
+    // A clip afterwards still starts its timestamps at 0.
+    await estimator.estimate({ timeMs: 0, image: IMAGE }, 0.5);
+    expect(tracker.detectForVideo.mock.calls.map(([, timestampMs]) => timestampMs)).toEqual([0]);
+  });
 });
