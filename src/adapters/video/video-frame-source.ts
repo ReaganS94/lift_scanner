@@ -1,4 +1,5 @@
 import { SEEK_NUDGE_SECONDS, type FrameSource, type SampledFrame } from '../../core';
+import { VideoFrameDrawer } from './video-frame-drawer';
 
 /** Loading a picked file is local, so this only trips if the browser can't decode it. */
 const LOAD_TIMEOUT_MS = 15_000;
@@ -22,6 +23,8 @@ export class VideoFrameSource implements FrameSource<HTMLVideoElement> {
   private readonly video: HTMLVideoElement;
   /** Seeks in a row where the browser didn't report the new frame in time. */
   private frameShownMisses = 0;
+  /** Draws picked frames for drawFrameAt. */
+  private readonly drawer = new VideoFrameDrawer();
 
   private constructor(video: HTMLVideoElement) {
     this.video = video;
@@ -76,14 +79,11 @@ export class VideoFrameSource implements FrameSource<HTMLVideoElement> {
     const scale = Math.min(1, maxSidePixels / Math.max(video.videoWidth, video.videoHeight, 1));
     const width = Math.max(1, Math.round(video.videoWidth * scale));
     const height = Math.max(1, Math.round(video.videoHeight * scale));
-    if (canvas.width !== width) canvas.width = width;
-    if (canvas.height !== height) canvas.height = height;
-    const context = canvas.getContext('2d');
-    if (!context) throw new Error("This frame couldn't be read from the video.");
-    context.drawImage(video, 0, 0, width, height);
+    this.drawer.draw(video, canvas, width, height);
   }
 
   dispose(): void {
+    this.drawer.dispose();
     this.video.removeAttribute('src');
     this.video.load();
   }
