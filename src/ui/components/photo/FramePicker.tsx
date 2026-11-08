@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { formatSeconds, timeOfFrame } from '../../playback/frames';
+import { formatSeconds, seekTimeOfFrame, timeOfFrame } from '../../playback/frames';
 import { playerClassName, videoFrameStyle } from '../../playback/player-layout';
 import { usePlayback } from '../../playback/use-playback';
 import { captureFrame } from '../../platform/capture-frame';
@@ -13,7 +13,10 @@ interface FramePickerProps {
   onCancel: () => void;
 }
 
-/** Frames a second the picker steps by: as fine as most phone videos. */
+/**
+ * Frames a second the picker steps by: as fine as most phone videos. A 60 fps clip has a frame
+ * between each step, which doesn't matter for picking a position.
+ */
 const PICKER_FPS = 30;
 /** How tall the video may get, so the buttons stay on screen on a phone. */
 const VIDEO_MAX_HEIGHT = '50svh';
@@ -64,7 +67,9 @@ export function FramePicker({ video, hint, onUse, onCancel }: FramePickerProps) 
         >
           <video
             ref={videoRef}
-            src={url}
+            // The media fragment makes iPhone Safari load and show the first frame. Without it,
+            // a paused video it hasn't played yet stays black.
+            src={`${url}#t=0.001`}
             playsInline
             muted
             preload="auto"
@@ -77,6 +82,8 @@ export function FramePicker({ video, hint, onUse, onCancel }: FramePickerProps) 
                   ? Math.max(1, Math.floor(duration * PICKER_FPS))
                   : 1,
               });
+              // A seek makes Safari decode and paint a frame, as it does after every step.
+              event.currentTarget.currentTime = seekTimeOfFrame(0, PICKER_FPS);
             }}
             onError={() => {
               setError("This video couldn't be read. Try an MP4 or MOV recorded on your phone.");
