@@ -32,6 +32,22 @@ export class VideoFrameDrawer {
   private gl: { canvas: HTMLCanvasElement; context: WebGLRenderingContext } | null = null;
 
   draw(video: HTMLVideoElement, target: HTMLCanvasElement, width: number, height: number): void {
+    try {
+      this.drawOnce(video, target, width, height);
+    } catch (e) {
+      if (e instanceof Error && e.message.startsWith(UNDRAWABLE)) throw e;
+      // Name what the browser refused, so a screenshot from a phone says where drawing broke.
+      const reason = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+      throw new Error(`${UNDRAWABLE} (drawing, ${this.mode}: ${reason})`, { cause: e });
+    }
+  }
+
+  private drawOnce(
+    video: HTMLVideoElement,
+    target: HTMLCanvasElement,
+    width: number,
+    height: number,
+  ): void {
     if (target.width !== width) target.width = width;
     if (target.height !== height) target.height = height;
     const context = target.getContext('2d', { willReadFrequently: true });
@@ -43,7 +59,7 @@ export class VideoFrameDrawer {
       this.mode = 'webgl';
     }
     context.drawImage(this.drawWithWebGL(video, width, height), 0, 0, width, height);
-    if (isBlank(target)) throw new Error(UNDRAWABLE);
+    if (isBlank(target)) throw new Error(`${UNDRAWABLE} (drawing, both ways came out black)`);
   }
 
   dispose(): void {

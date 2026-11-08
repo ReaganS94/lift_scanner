@@ -57,7 +57,7 @@ export function FramePicker({ video, hint, openFrameScrubber, onUse, onCancel }:
         setScrubber(result);
       },
       (e: unknown) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : UNREADABLE);
+        if (!cancelled) setError(e instanceof Error ? e.message : `${UNREADABLE} (${String(e)})`);
       },
     );
     return () => {
@@ -79,7 +79,7 @@ export function FramePicker({ video, hint, openFrameScrubber, onUse, onCancel }:
         if (wanted.current === target) break;
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : UNREADABLE);
+      setError(e instanceof Error ? e.message : `${UNREADABLE} (${String(e)})`);
     } finally {
       drawing.current = false;
     }
