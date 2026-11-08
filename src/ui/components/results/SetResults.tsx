@@ -7,6 +7,7 @@ import { downloadJson } from '../../download';
 import { viewLabel } from '../../flow/analysis-flow';
 import { repAtFrame } from '../../playback/frames';
 import { buzz } from '../../platform/haptics';
+import { loadShowSkeleton, saveShowSkeleton } from '../../preferences/show-skeleton';
 import { usePlayback } from '../../playback/use-playback';
 import { CheckSummaryList } from './CheckSummaryList';
 import { PlaybackControls } from './PlaybackControls';
@@ -48,6 +49,7 @@ export function SetResults({
     report.reps.length > 0 ? 0 : null,
   );
   const [looping, setLooping] = useState(false);
+  const [showSkeleton, setShowSkeleton] = useState(loadShowSkeleton);
   // The result last tapped. It's shown on the video while paused on the frame it was measured at.
   const [focused, setFocused] = useState<MeasuredCheckResult | null>(null);
 
@@ -144,7 +146,9 @@ export function SetResults({
             preload="auto"
             onClick={playback.togglePlay}
           />
-          <SkeletonOverlay sequence={sequence} videoRef={videoRef} highlight={highlight} />
+          {showSkeleton && (
+            <SkeletonOverlay sequence={sequence} videoRef={videoRef} highlight={highlight} />
+          )}
           {onFocusedFrame && (
             <ResultCaption
               result={focused}
@@ -160,6 +164,12 @@ export function SetResults({
           looping={looping}
           onToggleLoop={() => {
             setLooping((on) => !on);
+          }}
+          showSkeleton={showSkeleton}
+          onToggleSkeleton={() => {
+            const show = !showSkeleton;
+            setShowSkeleton(show);
+            saveShowSkeleton(show);
           }}
         />
       </div>
