@@ -8,6 +8,7 @@ import { viewLabel } from '../../flow/analysis-flow';
 import { repAtFrame } from '../../playback/frames';
 import { buzz } from '../../platform/haptics';
 import { loadShowSkeleton, saveShowSkeleton } from '../../preferences/show-skeleton';
+import { playerClassName, videoFrameStyle } from '../../playback/player-layout';
 import { usePlayback } from '../../playback/use-playback';
 import { usePinchZoom, zoomTransform } from '../../zoom/use-pinch-zoom';
 import { CheckSummaryList } from './CheckSummaryList';
@@ -133,14 +134,11 @@ export function SetResults({
         </button>
       </p>
 
-      <div className="player">
+      <div className={playerClassName(sequence.aspectRatio)}>
         <div
           ref={frameRef}
           className={zoom.zoomed ? 'video-frame video-frame--zoomed' : 'video-frame'}
-          style={{
-            aspectRatio: String(sequence.aspectRatio),
-            width: `min(100%, calc(${VIDEO_MAX_HEIGHT} * ${String(sequence.aspectRatio)}))`,
-          }}
+          style={videoFrameStyle(sequence.aspectRatio, VIDEO_MAX_HEIGHT)}
         >
           {/* Only the video is zoomed. The skeleton is drawn over wherever the zoomed picture
               lands, so its lines stay sharp and thin. */}
