@@ -195,6 +195,33 @@ progress::-moz-progress-bar {
 .video-frame {
   position: relative;
   margin: 0 auto;
+  overflow: hidden;
+  /* One finger still scrolls the page, but a pinch here zooms the video, not the page. */
+  touch-action: pan-y;
+}
+
+.video-frame--zoomed {
+  /* Zoomed in, one finger moves the picture instead. */
+  touch-action: none;
+}
+
+.video-zoom {
+  width: 100%;
+  height: 100%;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+.zoom-reset {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.5rem;
+  min-height: 2.25rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  background: rgb(10 11 13 / 0.8);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .video-frame video {

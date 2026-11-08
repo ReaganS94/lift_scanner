@@ -9,6 +9,7 @@ import { repAtFrame } from '../../playback/frames';
 import { buzz } from '../../platform/haptics';
 import { loadShowSkeleton, saveShowSkeleton } from '../../preferences/show-skeleton';
 import { usePlayback } from '../../playback/use-playback';
+import { usePinchZoom, zoomTransform } from '../../zoom/use-pinch-zoom';
 import { CheckSummaryList } from './CheckSummaryList';
 import { PlaybackControls } from './PlaybackControls';
 import { RepDetail } from './RepDetail';
@@ -45,6 +46,8 @@ export function SetResults({
   onStartOver,
 }: SetResultsProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
+  const zoom = usePinchZoom(frameRef);
   const [selectedRepIndex, setSelectedRepIndex] = useState<number | null>(
     report.reps.length > 0 ? 0 : null,
   );
@@ -132,28 +135,45 @@ export function SetResults({
 
       <div className="player">
         <div
-          className="video-frame"
+          ref={frameRef}
+          className={zoom.zoomed ? 'video-frame video-frame--zoomed' : 'video-frame'}
           style={{
             aspectRatio: String(sequence.aspectRatio),
             width: `min(100%, calc(${VIDEO_MAX_HEIGHT} * ${String(sequence.aspectRatio)}))`,
           }}
         >
-          <video
-            ref={videoRef}
-            src={videoUrl}
-            playsInline
-            muted
-            preload="auto"
-            onClick={playback.togglePlay}
-          />
+          {/* Only the video is zoomed. The skeleton is drawn over wherever the zoomed picture
+              lands, so its lines stay sharp and thin. */}
+          <div className="video-zoom" style={{ transform: zoomTransform(zoom.view) }}>
+            <video
+              ref={videoRef}
+              src={videoUrl}
+              playsInline
+              muted
+              preload="auto"
+              onClick={() => {
+                if (!zoom.justGestured()) playback.togglePlay();
+              }}
+            />
+          </div>
           {showSkeleton && (
-            <SkeletonOverlay sequence={sequence} videoRef={videoRef} highlight={highlight} />
+            <SkeletonOverlay
+              sequence={sequence}
+              videoRef={videoRef}
+              highlight={highlight}
+              zoom={zoom.view}
+            />
           )}
           {onFocusedFrame && (
             <ResultCaption
               result={focused}
               label={labels.get(focused.checkId) ?? focused.checkId}
             />
+          )}
+          {zoom.zoomed && (
+            <button type="button" className="zoom-reset" onClick={zoom.reset}>
+              {zoom.view.scale.toFixed(1)}× · Reset
+            </button>
           )}
         </div>
         <PlaybackControls
