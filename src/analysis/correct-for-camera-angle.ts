@@ -1,4 +1,10 @@
-import { LANDMARK, type BarPoint, type Landmark, type PoseSequence } from '../core';
+import {
+  LANDMARK,
+  type BarPoint,
+  type ClipContext,
+  type Landmark,
+  type PoseSequence,
+} from '../core';
 
 /**
  * Past this many degrees off side-on the correction isn't stretched any further: the stretch
@@ -6,6 +12,12 @@ import { LANDMARK, type BarPoint, type Landmark, type PoseSequence } from '../co
  * with the true movement. View detection stops calling a clip a side view past 45° anyway.
  */
 export const MAX_CORRECTED_DEGREES = 45;
+
+/** A side view with its camera angle corrected for (see correctForCameraAngle). */
+export function correctedClip(clip: ClipContext): ClipContext {
+  if (clip.view !== 'side' || clip.angleFromSide === undefined) return clip;
+  return { ...clip, sequence: correctForCameraAngle(clip.sequence, clip.angleFromSide) };
+}
 
 /**
  * Undoes most of what an angled camera does to a side view, so side-view angles read close to

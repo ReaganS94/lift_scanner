@@ -3,6 +3,7 @@ import { lockout } from './checks/lockout';
 import { touchPoint } from './checks/touch-point';
 import { unevenPress } from './checks/uneven-press';
 import { benchRepSignal } from './rep-signal';
+import { benchBottomPosition } from './positions/bottom';
 
 export const bench: LiftDefinition = {
   id: 'bench',
@@ -19,4 +20,5 @@ export const bench: LiftDefinition = {
     minShareOfBiggestRep: 0.4,
   },
   checks: [touchPoint, lockout, unevenPress],
+  positions: [benchBottomPosition],
 };

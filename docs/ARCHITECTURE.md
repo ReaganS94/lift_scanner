@@ -90,6 +90,8 @@ src/
         depth.ts
         torso-angle.ts
         knees-caving.ts
+      positions/       Moments checked from one photo (see Picture mode).
+        bottom/          index.ts defines the position; one file per check.
     deadlift/
       pull.ts          Finds the floor, liftoff and knee height, shared by the checks.
       checks/
@@ -309,6 +311,8 @@ well short is exactly what the depth check should report.
    constants at the top.
 3. Register the lift in `src/lifts/registry.ts`.
 4. Add a fixture from a real clip to `tests/fixtures/` and a test next to the lift.
+5. Optionally, add positions to check from a photo under `positions/` (see
+   Picture mode) and list them in the definition's `positions`.
 
 Nothing in `analysis`, `ui` or `adapters` should need to change.
 
@@ -523,6 +527,56 @@ with the hands lowest at the turn.
   synthetic sets every rep was still found, but this is one to watch on real
   clips.
 
+## Picture mode
+
+Picture mode checks one moment of a lift from a single photo, such as the bottom
+of a squat, instead of a whole set. The user picks the lift, then the moment (a
+`LiftPosition`), then takes or chooses a photo.
+
+A photo goes through the same steps as a clip of one frame
+(`analysis/photoAsClip`): `prepareClip` picks the lifter (the biggest person in
+shot, since there is no movement to go on), cleans the pose and guesses the
+view; the user confirms the view; then `analyzePhoto` corrects an angled side
+view exactly as for a video and runs the position's checks. Measured results
+point at frame 0, the photo.
+
+Each lift lists its positions in `LiftDefinition.positions`. A position lives in
+`src/lifts/<lift>/positions/<position>/`, with one file per `PositionCheck`. A
+position check gets a `PhotoContext` (one pose) instead of a `RepContext`, and
+where a video check judges the same thing it reuses that check's verdict
+function (`depthVerdict`, `torsoLeanVerdict`, `lockoutVerdict`, `touchVerdict`),
+so a photo and a video are judged by the same thresholds.
+
+| Lift     | Position | Check                  | View             | Pass                                             | Warn / fail                             |
+| -------- | -------- | ---------------------- | ---------------- | ------------------------------------------------ | --------------------------------------- |
+| Squat    | Bottom   | Depth                  | Side             | As the video check                               | As the video check                      |
+| Squat    | Bottom   | Torso angle            | Side             | As the video check                               | As the video check                      |
+| Squat    | Bottom   | Knees over feet        | Front / back     | Each knee at least 90% as far out as its ankle   | Warn 75% to 90%, fail below 75%         |
+| Deadlift | Setup    | Hip height             | Side             | Hips 10% to 75% of the way from knee to shoulder | Warn outside that, fail below the knees |
+| Deadlift | Setup    | Shoulders over the bar | Side             | Arm tilts back up to 25° or forward up to 5°     | Warn otherwise                          |
+| Deadlift | Setup    | Straight arms          | Side             | Elbow bent up to 15°                             | Warn otherwise                          |
+| Deadlift | Lockout  | Lockout                | Side             | As the video check                               | As the video check                      |
+| Bench    | Bottom   | Forearms vertical      | Side, front/back | Forearm within 15° of vertical                   | Warn otherwise, saying which way        |
+| Bench    | Bottom   | Touch point            | Side             | As the video check                               | As the video check                      |
+
+- **Knees over feet** has no standing frame to compare with, so each knee is
+  judged against its own ankle, and the knee is named by its side of the photo
+  (the model's left and right aren't reliable from behind).
+- **Shoulders over the bar** follows the arm from the shoulder, to the wrist when
+  seen, otherwise to the elbow: filmed side-on the near plate usually hides the
+  hands, but the elbow is above it.
+- **Straight arms** needs the wrist. On a real side-on clip the model still
+  placed a wrist hidden by the plate with enough confidence to be measured, and
+  read a straight arm as 20° bent, so treat its warning with care until tuned.
+- A single frame gets no smoothing across frames, so one misplaced joint isn't
+  averaged out. What a photo adds is the exact moment and no motion blur.
+- The pose comes from the estimator's image-mode finder alone
+  (`StillPoseEstimator.estimateStill`), not the video-mode tracker, which has
+  nothing to track from in one photo. Photos are decoded upright
+  (`adapters/photo`, EXIF orientation applied) and scaled to at most 2048 px, and
+  the screen shows that same picture so the skeleton lines up.
+- These thresholds are first guesses, to tune on real photos.
+
 ## Testing
 
 - **Unit tests** (Vitest) for `geometry`, `signal`, `reps` and each check.
@@ -592,6 +646,12 @@ CI runs type checking, lint, the import rules and tests on every pull request. O
   Both go in `PoseFrame.people`, the tracked person first; `landmarks` is that
   person until `pickLifter` replaces it. The pose models use the GPU, and fall
   back to the CPU if the GPU fails at start-up or on the first frame.
+
+- `adapters/photo/loadPhotoImage` reads a photo for picture mode: upright, scaled
+  down, on a canvas, plus an object URL of the same picture for the screen.
+  `main.tsx` hands both flows the same `MediaPipePoseEstimator`, so the model
+  loads once; its `estimateStill` runs the finder alone on a photo and doesn't
+  touch the tracker's timestamps.
 
 - MediaPipe's WebAssembly runtime is copied from `node_modules` into
   `public/mediapipe/` by `scripts/copy-mediapipe-wasm.mjs` after every install,

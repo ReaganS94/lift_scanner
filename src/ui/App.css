@@ -752,3 +752,29 @@ progress::-moz-progress-bar {
 .version__commit {
   opacity: 0.6;
 }
+
+.segmented--two {
+  grid-template-columns: 1fr 1fr;
+}
+
+/* As many equal columns as there are options, e.g. a lift's positions. */
+.segmented--fit {
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  grid-template-columns: none;
+}
+
+/* A checked photo, with the skeleton drawn over it. */
+.photo-frame {
+  position: relative;
+  margin: 0 auto;
+}
+
+.photo-frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+  border-radius: var(--radius);
+}

@@ -28,23 +28,32 @@ export const depth: FormCheck = {
       };
     }
 
-    // Judged on whole degrees, so the status always agrees with the number shown.
-    const degrees = Math.round(bottom.thighBelowParallel);
-    const measured = {
+    return {
       checkId: ID,
       value: bottom.thighBelowParallel,
       frameIndex: bottom.frameIndex,
-    };
-
-    if (degrees >= PASS_AT_DEGREES) {
-      const message =
-        degrees === 0 ? 'Hips reached parallel.' : `Hips went ${String(degrees)}° below parallel.`;
-      return { ...measured, status: 'pass', message };
-    }
-    return {
-      ...measured,
-      status: PASS_AT_DEGREES - degrees <= WARN_WITHIN_DEGREES ? 'warn' : 'fail',
-      message: `Hips stopped ${String(-degrees)}° above parallel.`,
+      ...depthVerdict(bottom.thighBelowParallel),
     };
   },
 };
+
+/**
+ * How a depth is judged, from how far the thigh got below parallel in degrees. Shared with the
+ * squat bottom photo check.
+ */
+export function depthVerdict(thighBelowParallel: number): {
+  status: 'pass' | 'warn' | 'fail';
+  message: string;
+} {
+  // Judged on whole degrees, so the status always agrees with the number shown.
+  const degrees = Math.round(thighBelowParallel);
+  if (degrees >= PASS_AT_DEGREES) {
+    const message =
+      degrees === 0 ? 'Hips reached parallel.' : `Hips went ${String(degrees)}° below parallel.`;
+    return { status: 'pass', message };
+  }
+  return {
+    status: PASS_AT_DEGREES - degrees <= WARN_WITHIN_DEGREES ? 'warn' : 'fail',
+    message: `Hips stopped ${String(-degrees)}° above parallel.`,
+  };
+}

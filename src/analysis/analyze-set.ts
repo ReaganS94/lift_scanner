@@ -1,13 +1,7 @@
-import type {
-  CheckResult,
-  ClipContext,
-  FormCheck,
-  LiftDefinition,
-  RepContext,
-  View,
-} from '../core';
+import type { CheckResult, ClipContext, FormCheck, LiftDefinition, RepContext } from '../core';
 import { segmentReps } from '../reps';
-import { correctForCameraAngle, MAX_CORRECTED_DEGREES } from './correct-for-camera-angle';
+import { correctedClip, MAX_CORRECTED_DEGREES } from './correct-for-camera-angle';
+import { describeViews } from './describe-views';
 import type { SetReport } from '../report';
 
 /**
@@ -37,12 +31,6 @@ export function analyzeSet(given: ClipContext, lift: LiftDefinition): SetReport 
   };
 }
 
-/** A side view with its camera angle corrected for (see correctForCameraAngle). */
-function correctedClip(clip: ClipContext): ClipContext {
-  if (clip.view !== 'side' || clip.angleFromSide === undefined) return clip;
-  return { ...clip, sequence: correctForCameraAngle(clip.sequence, clip.angleFromSide) };
-}
-
 function runCheck(check: FormCheck, context: RepContext): CheckResult {
   if (!check.supportedViews.includes(context.view)) {
     return {
@@ -52,8 +40,4 @@ function runCheck(check: FormCheck, context: RepContext): CheckResult {
     };
   }
   return check.evaluate(context);
-}
-
-function describeViews(views: readonly View[]): string {
-  return views.join(' or ');
 }

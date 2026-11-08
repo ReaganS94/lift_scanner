@@ -1,6 +1,7 @@
 export { angleFromVertical, forwardTilt, jointAngle } from './angles';
 export type { Facing } from './angles';
 export { torsoLength } from './body-scale';
+export { facingOf } from './facing';
 export { nearSide, sideLandmark, sidePoint } from './body-side';
 export type { PairedJoint } from './body-side';
 export {

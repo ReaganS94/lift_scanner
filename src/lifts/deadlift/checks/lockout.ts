@@ -1,4 +1,11 @@
-import type { BarPoint, CheckResult, FormCheck, PoseFrame, RepContext } from '../../../core';
+import type {
+  BarPoint,
+  BodySide,
+  CheckResult,
+  FormCheck,
+  PoseFrame,
+  RepContext,
+} from '../../../core';
 import { trustedPlates } from '../../../bar';
 import { forwardTilt, sidePoint, type Facing } from '../../../geometry';
 import { repFrames } from '../../../signal';
@@ -44,7 +51,7 @@ export const lockout: FormCheck = {
     let best: (Bends & { frameIndex: number }) | null = null;
     for (const { frame, index } of repFrames(context)) {
       if (Math.abs(index - context.rep.turnFrame) > window) continue;
-      const bends = bendsAt(frame, context, pull.facing, plates[index]);
+      const bends = bendsAt(frame, context.nearSide, pull.facing, plates[index]);
       if (!bends) continue;
       // Measuring both joints beats measuring only the hips; then the least bent moment wins.
       const better =
@@ -55,32 +62,42 @@ export const lockout: FormCheck = {
     }
     if (!best) return skipped("The hips or legs weren't seen clearly at the top.");
 
-    const hips = Math.max(0, Math.round(best.hips));
-    const knees = best.knees === null ? null : Math.max(0, Math.round(best.knees));
-    const worst = Math.max(hips, knees ?? 0);
-    const measured = { checkId: ID, value: worstOf(best), frameIndex: best.frameIndex };
-    const kneesNote =
-      best.kneeHidden === 'plate'
-        ? ' Your knees were behind the plate, so only the hips were checked.'
-        : best.kneeHidden === 'unseen'
-          ? ' Your knees weren’t seen clearly, so only the hips were checked.'
-          : '';
-    if (worst <= PASS_UP_TO_DEGREES) {
-      return {
-        ...measured,
-        status: 'pass',
-        message: (knees === null ? 'Hips locked out.' : 'Hips and knees locked out.') + kneesNote,
-      };
-    }
     return {
-      ...measured,
-      status: worst <= WARN_UP_TO_DEGREES ? 'warn' : 'fail',
-      message: shortfallMessage(hips, knees) + kneesNote,
+      checkId: ID,
+      value: worstOf(best),
+      frameIndex: best.frameIndex,
+      ...lockoutVerdict(best),
     };
   },
 };
 
-interface Bends {
+/** How a lockout's bends are judged, shared with the lockout photo check. */
+export function lockoutVerdict(bends: Bends): {
+  status: 'pass' | 'warn' | 'fail';
+  message: string;
+} {
+  const hips = Math.max(0, Math.round(bends.hips));
+  const knees = bends.knees === null ? null : Math.max(0, Math.round(bends.knees));
+  const worst = Math.max(hips, knees ?? 0);
+  const kneesNote =
+    bends.kneeHidden === 'plate'
+      ? ' Your knees were behind the plate, so only the hips were checked.'
+      : bends.kneeHidden === 'unseen'
+        ? ' Your knees weren’t seen clearly, so only the hips were checked.'
+        : '';
+  if (worst <= PASS_UP_TO_DEGREES) {
+    return {
+      status: 'pass',
+      message: (knees === null ? 'Hips locked out.' : 'Hips and knees locked out.') + kneesNote,
+    };
+  }
+  return {
+    status: worst <= WARN_UP_TO_DEGREES ? 'warn' : 'fail',
+    message: shortfallMessage(hips, knees) + kneesNote,
+  };
+}
+
+export interface Bends {
   readonly hips: number;
   /** Null when the knee was hidden, so it wasn't measured. */
   readonly knees: number | null;
@@ -88,7 +105,8 @@ interface Bends {
   readonly kneeHidden: 'plate' | 'unseen' | null;
 }
 
-function worstOf(bends: Bends): number {
+/** The bigger of the two bends, in degrees. */
+export function worstOf(bends: Bends): number {
   return Math.max(bends.hips, bends.knees ?? -Infinity);
 }
 
@@ -98,18 +116,18 @@ function worstOf(bends: Bends): number {
  * for a hip that hasn't straightened. Without a knee that can be seen, the hip is measured
  * against the hip-to-ankle line and the knee isn't measured.
  */
-function bendsAt(
+export function bendsAt(
   frame: PoseFrame,
-  context: RepContext,
+  side: BodySide,
   facing: Facing,
   plate: BarPoint | null | undefined,
 ): Bends | null {
-  const hip = sidePoint(frame, context.nearSide, 'Hip');
-  const ankle = sidePoint(frame, context.nearSide, 'Ankle');
-  const torso = torsoLean(frame, context.nearSide, facing);
+  const hip = sidePoint(frame, side, 'Hip');
+  const ankle = sidePoint(frame, side, 'Ankle');
+  const torso = torsoLean(frame, side, facing);
   if (!hip || !ankle || torso === null) return null;
 
-  const knee = sidePoint(frame, context.nearSide, 'Knee');
+  const knee = sidePoint(frame, side, 'Knee');
   const kneeHidden = !knee ? 'unseen' : hiddenByPlate(knee, plate) ? 'plate' : null;
   if (!knee || kneeHidden) {
     const leg = forwardTilt(hip, ankle, facing);

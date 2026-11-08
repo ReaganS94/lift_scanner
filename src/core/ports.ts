@@ -31,6 +31,16 @@ export interface PoseEstimator<TImage> {
 }
 
 /**
+ * Finds the body pose in one photo, looking for everyone afresh with no frame-to-frame
+ * tracking. Implemented in src/adapters/pose/.
+ */
+export interface StillPoseEstimator<TImage> {
+  init(): Promise<void>;
+  /** Landmarks in the shared unit, with everyone found in PoseFrame.people. timeMs is 0. */
+  estimateStill(image: TImage, aspectRatio: number): Promise<PoseFrame>;
+}
+
+/**
  * Reads part of a frame as a small greyscale picture, for following things the pose model
  * doesn't see, such as the bar. Implemented in src/adapters/video/.
  */

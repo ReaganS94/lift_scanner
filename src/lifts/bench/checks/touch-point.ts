@@ -1,4 +1,4 @@
-import type { CheckResult, FormCheck, PoseFrame, RepContext } from '../../../core';
+import type { BodySide, CheckResult, FormCheck, PoseFrame, RepContext } from '../../../core';
 import { sidePoint } from '../../../geometry';
 import { median, repFrames } from '../../../signal';
 
@@ -30,7 +30,7 @@ export const touchPoint: FormCheck = {
     const near = repFrames(context).filter(
       ({ index }) => Math.abs(index - context.rep.turnFrame) <= radius,
     );
-    const along = median(near.map(({ frame }) => shareAlongBody(frame, context)));
+    const along = median(near.map(({ frame }) => shareAlongBody(frame, context.nearSide)));
     if (along === null) {
       return {
         checkId: ID,
@@ -39,26 +39,27 @@ export const touchPoint: FormCheck = {
       };
     }
 
-    const measured = { checkId: ID, value: along, frameIndex: context.rep.turnFrame };
-    if (along < HIGH_BELOW) {
-      return {
-        ...measured,
-        status: 'warn',
-        message: 'The bar touched high, near the collarbones.',
-      };
-    }
-    if (along > LOW_ABOVE) {
-      return { ...measured, status: 'warn', message: 'The bar touched low, towards the stomach.' };
-    }
-    return { ...measured, status: 'pass', message: `The bar touched the ${chestPart(along)}.` };
+    return { checkId: ID, value: along, frameIndex: context.rep.turnFrame, ...touchVerdict(along) };
   },
 };
 
-/** How far along the body the near-side wrist is, from the shoulder (0) to the hip (1). */
-function shareAlongBody(frame: PoseFrame, context: RepContext): number | null {
-  const shoulder = sidePoint(frame, context.nearSide, 'Shoulder');
-  const hip = sidePoint(frame, context.nearSide, 'Hip');
-  const wrist = sidePoint(frame, context.nearSide, 'Wrist');
+/**
+ * Where a touch is judged to be, from how far along the body it is. Shared with the bench
+ * bottom photo check.
+ */
+export function touchVerdict(along: number): { status: 'pass' | 'warn'; message: string } {
+  if (along < HIGH_BELOW)
+    return { status: 'warn', message: 'The bar touched high, near the collarbones.' };
+  if (along > LOW_ABOVE)
+    return { status: 'warn', message: 'The bar touched low, towards the stomach.' };
+  return { status: 'pass', message: `The bar touched the ${chestPart(along)}.` };
+}
+
+/** How far along the body one side's wrist is, from the shoulder (0) to the hip (1). */
+export function shareAlongBody(frame: PoseFrame, side: BodySide): number | null {
+  const shoulder = sidePoint(frame, side, 'Shoulder');
+  const hip = sidePoint(frame, side, 'Hip');
+  const wrist = sidePoint(frame, side, 'Wrist');
   if (!shoulder || !hip || !wrist) return null;
   const body = { x: hip.x - shoulder.x, y: hip.y - shoulder.y };
   const lengthSquared = body.x ** 2 + body.y ** 2;

@@ -3,6 +3,8 @@ import { barPath } from './checks/bar-path';
 import { hipsRiseFirst } from './checks/hips-rise-first';
 import { lockout } from './checks/lockout';
 import { deadliftRepSignal } from './rep-signal';
+import { deadliftLockoutPosition } from './positions/lockout';
+import { deadliftSetupPosition } from './positions/setup';
 
 export const deadlift: LiftDefinition = {
   id: 'deadlift',
@@ -21,4 +23,5 @@ export const deadlift: LiftDefinition = {
     'Filming closer, higher or with the 0.5× lens won’t uncover your hands. Use the 1× lens about 3 m away, so the edges of the picture don’t bend.',
     'Don’t turn the camera to see your hands. Hip and knee angles are corrected for a camera up to about 45° off side-on, but at an angle the plate looks oval and bar path can’t be followed.',
   ],
+  positions: [deadliftSetupPosition, deadliftLockoutPosition],
 };
