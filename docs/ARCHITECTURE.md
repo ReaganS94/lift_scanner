@@ -531,7 +531,10 @@ with the hands lowest at the turn.
 
 Picture mode checks one moment of a lift from a single photo, such as the bottom
 of a squat, instead of a whole set. The user picks the lift, then the moment (a
-`LiftPosition`), then takes or chooses a photo.
+`LiftPosition`), then takes or chooses a photo, or picks one frame from a video
+(`ui/components/photo/FramePicker`: scrub, step a frame at a time, "Use this
+frame"). A picked frame is captured as a JPEG (`ui/platform/captureFrame`) and
+from then on is checked exactly like a photo.
 
 A photo goes through the same steps as a clip of one frame
 (`analysis/photoAsClip`): `prepareClip` picks the lifter (the biggest person in
@@ -568,6 +571,8 @@ so a photo and a video are judged by the same thresholds.
 - **Straight arms** needs the wrist. On a real side-on clip the model still
   placed a wrist hidden by the plate with enough confidence to be measured, and
   read a straight arm as 20° bent, so treat its warning with care until tuned.
+  Skipping on low wrist visibility wouldn't catch it: that hidden wrist came
+  back with visibility 0.92.
 - A single frame gets no smoothing across frames, so one misplaced joint isn't
   averaged out. What a photo adds is the exact moment and no motion blur.
 - The pose comes from the estimator's image-mode finder alone
