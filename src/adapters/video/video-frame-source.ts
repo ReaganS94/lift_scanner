@@ -43,7 +43,7 @@ export class VideoFrameSource implements FrameSource<HTMLVideoElement> {
     video.playsInline = true; // iOS would otherwise insist on fullscreen
     video.preload = 'auto';
     video.src = src;
-    await waitForEvent(video, 'loadeddata', LOAD_TIMEOUT_MS, UNREADABLE);
+    await waitForEvent(video, 'loadeddata', 'opening', LOAD_TIMEOUT_MS, UNREADABLE);
     return new VideoFrameSource(video);
   }
 
@@ -98,6 +98,7 @@ export class VideoFrameSource implements FrameSource<HTMLVideoElement> {
     const seeked = waitForEvent(
       video,
       'seeked',
+      'seeking',
       SEEK_TIMEOUT_MS,
       'The video stopped responding while being read.',
     );
@@ -127,9 +128,14 @@ function waitForFrameShown(video: HTMLVideoElement): Promise<boolean> {
   });
 }
 
+/**
+ * Waits for a video event. A failure message names the step and the browser's media error
+ * code, so a screenshot from a phone says where reading broke.
+ */
 function waitForEvent(
   video: HTMLVideoElement,
   event: 'loadeddata' | 'seeked',
+  step: 'opening' | 'seeking',
   timeoutMs: number,
   failureMessage: string,
 ): Promise<void> {
@@ -145,11 +151,12 @@ function waitForEvent(
     };
     const onError = () => {
       cleanUp();
-      reject(new Error(UNREADABLE));
+      const code = video.error?.code;
+      reject(new Error(`${UNREADABLE} (${step}${code ? `, media error ${code}` : ''})`));
     };
     const timer = setTimeout(() => {
       cleanUp();
-      reject(new Error(failureMessage));
+      reject(new Error(`${failureMessage} (${step} timed out)`));
     }, timeoutMs);
     video.addEventListener(event, onEvent);
     video.addEventListener('error', onError);
