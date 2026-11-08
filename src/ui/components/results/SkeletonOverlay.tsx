@@ -8,6 +8,7 @@ import {
   type SkeletonStyle,
 } from '../../skeleton/draw-skeleton';
 import { videoPicture } from '../../skeleton/video-picture';
+import type { ZoomView } from '../../zoom/zoom-view';
 
 /** Joints to pick out in a result's colour, while paused on the frame it was measured at. */
 export interface SkeletonHighlight {
@@ -19,6 +20,8 @@ interface SkeletonOverlayProps {
   sequence: PoseSequence;
   videoRef: RefObject<HTMLVideoElement | null>;
   highlight: SkeletonHighlight | null;
+  /** How the video is zoomed. The skeleton follows the zoomed picture, redrawn on each change. */
+  zoom: ZoomView;
 }
 
 /**
@@ -26,7 +29,7 @@ interface SkeletonOverlayProps {
  * highlight, the joints a check looked at, and the lines between them, are drawn thicker in the
  * result's colour. Where the bar was followed, its plate and recent path are drawn too.
  */
-export function SkeletonOverlay({ sequence, videoRef, highlight }: SkeletonOverlayProps) {
+export function SkeletonOverlay({ sequence, videoRef, highlight, zoom }: SkeletonOverlayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const highlightRef = useRef(highlight);
   // Colours are read from the theme once per highlight, not on every animation frame.
@@ -39,6 +42,11 @@ export function SkeletonOverlay({ sequence, videoRef, highlight }: SkeletonOverl
     if (canvas) styleRef.current = skeletonStyle(canvas, highlight);
     redrawRef.current();
   }, [highlight]);
+
+  // The picture is measured on every draw, so a redraw is all a zoom needs.
+  useEffect(() => {
+    redrawRef.current();
+  }, [zoom]);
 
   useEffect(() => {
     const canvas = canvasRef.current;

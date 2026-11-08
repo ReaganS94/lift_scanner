@@ -9,9 +9,15 @@ interface PlaybackControlsProps {
   loopRepNumber: number | null;
   looping: boolean;
   onToggleLoop: () => void;
+  /** Whether the skeleton (and bar path) is drawn over the video. */
+  showSkeleton: boolean;
+  onToggleSkeleton: () => void;
 }
 
-/** Controls for studying a rep: scrub, play, step a frame at a time, slow motion and loop. */
+/**
+ * Controls for studying a rep: scrub, play, step a frame at a time, slow motion, loop, and
+ * hiding the skeleton to see the lift itself.
+ */
 export function PlaybackControls({
   playback,
   sampleFps,
@@ -19,6 +25,8 @@ export function PlaybackControls({
   loopRepNumber,
   looping,
   onToggleLoop,
+  showSkeleton,
+  onToggleSkeleton,
 }: PlaybackControlsProps) {
   const lastFrame = Math.max(frameCount - 1, 0);
   return (
@@ -86,16 +94,27 @@ export function PlaybackControls({
           ))}
         </div>
 
-        <button
-          type="button"
-          aria-pressed={looping}
-          className={looping ? 'selected' : ''}
-          disabled={loopRepNumber === null}
-          aria-label={loopRepNumber === null ? 'Loop' : `Loop rep ${String(loopRepNumber)}`}
-          onClick={onToggleLoop}
-        >
-          ⟲ Loop
-        </button>
+        <div className="playback__group">
+          <button
+            type="button"
+            aria-pressed={looping}
+            className={looping ? 'selected' : ''}
+            disabled={loopRepNumber === null}
+            aria-label={loopRepNumber === null ? 'Loop' : `Loop rep ${String(loopRepNumber)}`}
+            onClick={onToggleLoop}
+          >
+            ⟲ Loop
+          </button>
+          <button
+            type="button"
+            aria-pressed={showSkeleton}
+            className={showSkeleton ? 'selected' : ''}
+            aria-label="Show skeleton"
+            onClick={onToggleSkeleton}
+          >
+            Skeleton
+          </button>
+        </div>
       </div>
     </div>
   );
